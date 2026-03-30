@@ -10,6 +10,7 @@ dependencies = [
     "onnx>=1.21.0",
     "onnxscript>=0.6.2",
     "opencv-python>=4.13.0.92",
+    "psycopg[binary]>=3.3.3",
     "sqlalchemy>=2.0.48",
     "torch>=2.11.0",
 ]
