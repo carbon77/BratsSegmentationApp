@@ -2,5 +2,14 @@
 name = "backend"
 version = "0.1.0"
 description = "Add your description here"
+readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "fastapi[standard]>=0.135.2",
+    "nibabel>=5.4.2",
+    "onnx>=1.21.0",
+    "onnxscript>=0.6.2",
+    "opencv-python>=4.13.0.92",
+    "sqlalchemy>=2.0.48",
+    "torch>=2.11.0",
+]
