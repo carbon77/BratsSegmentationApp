@@ -7,7 +7,7 @@ from app.db.models import Scan
 from app.services.inference import run_inference
 from app.services.preprocessing import preprocess_case
 from app.services.results import compute_metrics, get_slice_plot
-from app.services.storage import save_uploaded_files, local_paths_for_case, save_result, load_result, delete_scan_files
+from app.services.storage import save_uploaded_files_async, local_paths_for_case, save_result, load_result, delete_scan_files
 
 router = APIRouter()
 
@@ -27,7 +27,7 @@ async def predict(
         "flair": flair,
     }
     print(f'Uploading files...')
-    case_id, upload_prefix, s3_paths = save_uploaded_files(files)
+    case_id, upload_prefix, s3_paths = save_uploaded_files_async(files)
     print(f'Files uploaded!')
 
     scan = Scan(case_id=case_id, upload_prefix=upload_prefix, status='uploaded')

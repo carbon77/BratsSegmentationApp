@@ -51,6 +51,7 @@ dependencies = [
     { name = "onnxscript" },
     { name = "opencv-python" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "python-dotenv" },
     { name = "sqlalchemy" },
     { name = "torch" },
 ]
@@ -65,6 +66,7 @@ requires-dist = [
     { name = "onnxscript", specifier = ">=0.6.2" },
     { name = "opencv-python", specifier = ">=4.13.0.92" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.3" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "sqlalchemy", specifier = ">=2.0.48" },
     { name = "torch", specifier = ">=2.11.0" },
 ]

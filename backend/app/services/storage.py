@@ -2,6 +2,8 @@ import io
 import os
 import tempfile
 import uuid
+from asyncio import as_completed
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 
 import boto3
@@ -27,18 +29,26 @@ def _from_s3_uri(uri: str) -> str:
     return uri.removeprefix(expected_prefix)
 
 
-def save_uploaded_files(files):
+def _upload_single(args):
+    name, file, upload_prefix = args
+    key = f'{upload_prefix}/{name}.nii'
+    print(f'Uploading file key={key}')
+
+    _s3.upload_fileobj(file.file, S3_BUCKET, key)
+
+    print(f'File uploaded key={key}')
+    file.file.seek(0)
+    return name, _to_s3_uri(key)
+
+
+def save_uploaded_files_async(files):
     case_id = str(uuid.uuid4())
     upload_prefix = f'uploads/{case_id}'
-    paths = {}
 
-    for name, file in files.items():
-        key = f'{upload_prefix}/{name}.nii'
-        print(f'Uploading key={key}')
-        _s3.upload_fileobj(file.file, S3_BUCKET, key)
-        print(f'File uploaded key={key}')
-        paths[name] = _to_s3_uri(key)
-        file.file.seek(0)
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        args = [(name, file, upload_prefix) for name, file in files.items()]
+        s3_paths = executor.map(_upload_single, args)
+        paths = {name: path for name, path in s3_paths}
     return case_id, upload_prefix, paths
 
 

@@ -1,10 +1,13 @@
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from app.api.routes import router
 from app.db.database import engine
 from app.db.models import Base
+
+load_dotenv()
 
 
 @asynccontextmanager
