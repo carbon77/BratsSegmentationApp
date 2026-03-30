@@ -1,3 +1,4 @@
+import uuid
 from http.client import HTTPException
 
 from fastapi import APIRouter, UploadFile, File, Depends
@@ -5,9 +6,7 @@ from sqlalchemy.orm.session import Session
 
 from app.db.database import get_db
 from app.db.models import Scan
-from app.services.inference import run_inference
-from app.services.preprocessing import preprocess_case
-from app.services.storage import save_uploaded_files, save_result
+from app.services.storage import save_uploaded_files
 
 router = APIRouter()
 
@@ -26,18 +25,15 @@ async def predict(
         "t2": t2,
         "flair": flair,
     }
-    case_id, paths = save_uploaded_files(files)
+    case_id, upload_prefix, s3_paths = save_uploaded_files(files)
 
-    scan = Scan(case_id=case_id, upload_prefix=case_id, status='uploaded')
+    scan = Scan(case_id=case_id, upload_prefix=upload_prefix, status='uploaded')
     db.add(scan)
     db.commit()
 
-    tensor = preprocess_case(paths)
-    prediction = run_inference(tensor)
-    result_path = save_result(case_id, prediction)
     return {
         "case_id": case_id,
-        "result_path": result_path,
+        "upload_prefix": upload_prefix,
     }
 
 
