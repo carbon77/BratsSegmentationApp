@@ -5,13 +5,19 @@
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div>
         <label class="mb-2 block text-sm text-slate-300">Slice index</label>
-        <InputNumber v-model="localSliceIdx" :min="0" inputId="sliceIdx" />
+        <InputNumber
+          v-model="localSliceIdx"
+          :min="0"
+          inputId="sliceIdx"
+          inputClass="!bg-slate-900 !text-cyan-100 !border-cyan-600/60"
+        />
       </div>
 
       <Button
         label="Load image"
         icon="pi pi-image"
         :loading="isLoading"
+        class="!bg-cyan-600 !border-cyan-500 hover:!bg-cyan-500"
         @click="loadImage"
       />
       <Button
@@ -20,6 +26,8 @@
         severity="secondary"
         :loading="isDownloading"
         :disabled="!imageSrc"
+        class="!border-violet-400 !text-violet-200"
+        outlined
         @click="downloadImage"
       />
     </div>

@@ -9,7 +9,12 @@
         :error-message="uploadError"
         @submit="submitUpload"
       />
-      <ScansList :scans="scans" :is-loading="isLoadingScans" />
+      <ScansList
+        :scans="scans"
+        :is-loading="isLoadingScans"
+        :deleting-case-id="deletingCaseId"
+        @delete="handleDeleteScan"
+      />
     </div>
   </section>
 </template>
@@ -21,7 +26,7 @@ import Message from 'primevue/message'
 
 import ScansList from '../components/home/ScansList.vue'
 import UploadPanel from '../components/home/UploadPanel.vue'
-import { fetchScans, uploadScan } from '../services/api'
+import { deleteScan, fetchScans, uploadScan } from '../services/api'
 
 const router = useRouter()
 
@@ -35,6 +40,7 @@ const selectedFiles = ref({
 const scans = ref([])
 const isLoadingScans = ref(false)
 const isUploading = ref(false)
+const deletingCaseId = ref('')
 const uploadError = ref('')
 const pageError = ref('')
 
@@ -62,6 +68,19 @@ async function submitUpload() {
     uploadError.value = 'Upload failed. Verify file names include modality keywords.'
   } finally {
     isUploading.value = false
+  }
+}
+
+async function handleDeleteScan(caseId) {
+  pageError.value = ''
+  deletingCaseId.value = caseId
+  try {
+    await deleteScan(caseId)
+    scans.value = scans.value.filter((scan) => scan.case_id !== caseId)
+  } catch {
+    pageError.value = `Could not delete scan ${caseId}.`
+  } finally {
+    deletingCaseId.value = ''
   }
 }
 

@@ -11,7 +11,7 @@
               <p class="font-medium text-cyan-100">Select all modalities</p>
               <p class="text-xs text-slate-300">Choose four .nii files in one action.</p>
             </div>
-            <Button label="Choose 4 files" icon="pi pi-folder-open" outlined @click="openAllPicker" />
+            <Button label="Choose 4 files" icon="pi pi-folder-open" outlined class="!border-cyan-400 !text-cyan-200" @click="openAllPicker" />
           </div>
           <input
             ref="allInputRef"
@@ -38,6 +38,7 @@
               :label="modelValue[modality] ? 'Replace file' : 'Choose file'"
               icon="pi pi-upload"
               outlined
+              class="!border-violet-400 !text-violet-200"
               @click="openPicker(modality)"
             />
           </div>
@@ -56,6 +57,7 @@
             icon="pi pi-cloud-upload"
             :loading="isUploading"
             :disabled="!allModalitiesSelected || isUploading"
+            class="!bg-violet-600 !border-violet-500 hover:!bg-violet-500"
             @click="$emit('submit')"
           />
           <small class="text-slate-300">All 4 modalities are required.</small>

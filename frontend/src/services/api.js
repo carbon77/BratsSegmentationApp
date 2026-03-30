@@ -1,11 +1,14 @@
-const jsonHeaders = {
-  Accept: 'application/json'
-}
+import axios from 'axios'
+
+const api = axios.create({
+  headers: {
+    Accept: 'application/json'
+  }
+})
 
 export async function fetchScans() {
-  const response = await fetch('/scans', { headers: jsonHeaders })
-  if (!response.ok) throw new Error('Failed to load scans')
-  return response.json()
+  const { data } = await api.get('/scans')
+  return data
 }
 
 export async function uploadScan(filesByModality) {
@@ -14,23 +17,22 @@ export async function uploadScan(filesByModality) {
     formData.append(modality, file)
   })
 
-  const response = await fetch('/predict', {
-    method: 'POST',
-    body: formData
-  })
-
-  if (!response.ok) throw new Error('Failed to upload scan')
-  return response.json()
+  const { data } = await api.post('/predict', formData)
+  return data
 }
 
 export async function fetchMetrics(caseId) {
-  const response = await fetch(`/scans/${caseId}/result/metrics`, { headers: jsonHeaders })
-  if (!response.ok) throw new Error('Failed to load metrics')
-  return response.json()
+  const { data } = await api.get(`/scans/${caseId}/result/metrics`)
+  return data
 }
 
 export async function downloadSlice(caseId, sliceIdx) {
-  const response = await fetch(`/scans/${caseId}/result/images?slice_idx=${sliceIdx}`)
-  if (!response.ok) throw new Error('Failed to download image')
-  return response.blob()
+  const { data } = await api.get(`/scans/${caseId}/result/images?slice_idx=${sliceIdx}`, {
+    responseType: 'blob'
+  })
+  return data
+}
+
+export async function deleteScan(caseId) {
+  await api.delete(`/scans/${caseId}`)
 }
