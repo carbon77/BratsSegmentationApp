@@ -88,6 +88,23 @@ body {
   gap: 0.5rem;
 }
 
+.scan-header {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.title-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.list-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
 .submit-row {
   justify-content: space-between;
 }
