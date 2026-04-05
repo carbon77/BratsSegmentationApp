@@ -55,7 +55,7 @@ def save_uploaded_files_async(files):
 def delete_scan_files(scan: type[Scan]):
     for_deletion = [
         {'Key': f'{scan.upload_prefix}/{modality}.nii'}
-        for modality in ('t1', 't1ce', 't2', 'flair')
+        for modality in ('t1', 't1ce', 't2', 'flair', 'true_mask')
     ]
     if scan.result_path:
         for_deletion.append({'Key': _from_s3_uri(scan.result_path)})

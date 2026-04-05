@@ -5,7 +5,7 @@ from sqlalchemy.orm.session import Session
 from app.db.database import get_db
 from app.db.models import Scan
 from app.services.inference import run_inference
-from app.services.preprocessing import preprocess_case
+from app.services.preprocessing import preprocess_case, preprocess_true_mask
 from app.services.results import compute_metrics, get_slice_plot
 from app.services.storage import save_uploaded_files_async, local_paths_for_case, save_result, load_result, delete_scan_files
 
@@ -18,6 +18,7 @@ async def predict(
         t1ce: UploadFile = File(...),
         t2: UploadFile = File(...),
         flair: UploadFile = File(...),
+        true_mask: UploadFile | None = File(None),
         db: Session = Depends(get_db)
 ):
     files = {
@@ -26,6 +27,9 @@ async def predict(
         "t2": t2,
         "flair": flair,
     }
+    if true_mask is not None:
+        files['true_mask'] = true_mask
+
     print(f'Uploading files...')
     case_id, upload_prefix, s3_paths = save_uploaded_files_async(files)
     print(f'Files uploaded!')
@@ -36,9 +40,11 @@ async def predict(
 
     print('Preprocessing files...')
     with local_paths_for_case(s3_paths) as local_paths:
-        tensor = preprocess_case(local_paths)
+        modality_paths = {modality: local_paths[modality] for modality in ('t1', 't1ce', 't2', 'flair')}
+        tensor = preprocess_case(modality_paths)
+        true_mask_volume = preprocess_true_mask(local_paths['true_mask']) if 'true_mask' in local_paths else None
     prediction = run_inference(tensor)
-    metrics = compute_metrics(prediction)
+    metrics = compute_metrics(prediction, true_mask_volume)
     result_path = save_result(case_id, prediction)
     print('Files processed!')
 
