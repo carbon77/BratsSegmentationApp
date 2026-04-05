@@ -1,25 +1,26 @@
 <template>
-  <div class="rounded-xl border border-fuchsia-500/30 bg-slate-800/70 p-4">
-    <h3 class="mb-3 text-lg font-medium text-fuchsia-200">Metrics</h3>
-
-    <div v-if="rows.length" class="space-y-4">
-      <div v-for="section in sectionedRows" :key="section.group" class="rounded-lg border border-fuchsia-500/20 bg-slate-900/60 p-3">
-        <h4 class="mb-2 text-sm font-semibold uppercase tracking-wide text-fuchsia-300">{{ section.group }}</h4>
-        <DataTable :value="section.items" size="small" responsiveLayout="scroll" class="metrics-table">
+  <Panel header="Metrics">
+    <Accordion v-if="rows.length" :activeIndex="0" class="metrics-accordion">
+      <AccordionTab v-for="section in sectionedRows" :key="section.group" :header="section.group.toUpperCase()">
+        <DataTable :value="section.items" size="small" responsiveLayout="scroll">
           <Column field="metric" header="Metric" />
           <Column field="value" header="Value" />
         </DataTable>
-      </div>
-    </div>
+      </AccordionTab>
+    </Accordion>
 
-    <p v-else class="text-slate-300">No metrics available.</p>
-  </div>
+    <Message v-else severity="info">No metrics available.</Message>
+  </Panel>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import Accordion from 'primevue/accordion'
+import AccordionTab from 'primevue/accordiontab'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
+import Message from 'primevue/message'
+import Panel from 'primevue/panel'
 
 const props = defineProps({
   metrics: {

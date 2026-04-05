@@ -1,30 +1,18 @@
 <template>
-  <Card class="h-full">
-    <template #title>
-      <span class="text-emerald-200">Created scans</span>
-    </template>
-    <template #content>
-      <div v-if="isLoading" class="py-4">
-        <ProgressSpinner style="width: 34px; height: 34px" strokeWidth="6" />
-      </div>
+  <Panel header="Created scans" toggleable>
+    <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
 
-      <ul v-else-if="scans.length" class="space-y-2">
-        <li
-          v-for="scan in scans"
-          :key="scan.case_id"
-          class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-500/30 bg-slate-800/70 px-3 py-2"
-        >
-          <span class="font-mono text-sm text-emerald-100">{{ scan.case_id }}</span>
-          <div class="flex items-center gap-2">
-            <RouterLink :to="`/scans/${scan.case_id}`">
-              <Button
-                size="small"
-                label="Open"
-                icon="pi pi-arrow-right"
-                iconPos="right"
-                class="!border-cyan-400 !text-cyan-200"
-                outlined
-              />
+    <DataTable v-else :value="scans" stripedRows size="small" dataKey="case_id" responsiveLayout="scroll">
+      <Column field="case_id" header="Case ID">
+        <template #body="slotProps">
+          <Tag :value="slotProps.data.case_id" />
+        </template>
+      </Column>
+      <Column header="Actions" bodyClass="actions-cell">
+        <template #body="slotProps">
+          <div class="table-actions">
+            <RouterLink :to="`/scans/${slotProps.data.case_id}`">
+              <Button size="small" icon="pi pi-external-link" label="Open" text />
             </RouterLink>
             <Button
               size="small"
@@ -32,23 +20,25 @@
               icon="pi pi-trash"
               severity="danger"
               outlined
-              :loading="deletingCaseId === scan.case_id"
-              @click="$emit('delete', scan.case_id)"
+              :loading="deletingCaseId === slotProps.data.case_id"
+              @click="$emit('delete', slotProps.data.case_id)"
             />
           </div>
-        </li>
-      </ul>
-
-      <p v-else class="text-slate-300">No scans yet.</p>
-    </template>
-  </Card>
+        </template>
+      </Column>
+      <template #empty>No scans yet.</template>
+    </DataTable>
+  </Panel>
 </template>
 
 <script setup>
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
-import Card from 'primevue/card'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
+import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
+import Tag from 'primevue/tag'
 
 defineProps({
   scans: {
