@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Image from 'primevue/image'
 import InputNumber from 'primevue/inputnumber'
@@ -93,6 +93,5 @@ function downloadImage() {
   isDownloading.value = false
 }
 
-onMounted(loadImage)
 onUnmounted(clearObjectUrl)
 </script>

@@ -1,11 +1,25 @@
 <template>
   <Panel header="Created scans" toggleable>
+    <div class="list-toolbar">
+      <IconField>
+        <InputIcon class="pi pi-search" />
+        <InputText v-model="searchTerm" placeholder="Search by title" />
+      </IconField>
+    </div>
+
     <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
 
-    <DataTable v-else :value="scans" stripedRows size="small" dataKey="case_id" responsiveLayout="scroll">
-      <Column field="case_id" header="Case ID">
+    <DataTable
+      v-else
+      :value="filteredScans"
+      stripedRows
+      size="small"
+      dataKey="case_id"
+      responsiveLayout="scroll"
+    >
+      <Column field="title" header="Title">
         <template #body="slotProps">
-          <Tag :value="slotProps.data.case_id" />
+          <Tag :value="slotProps.data.title || slotProps.data.case_id" />
         </template>
       </Column>
       <Column header="Actions" bodyClass="actions-cell">
@@ -32,15 +46,19 @@
 </template>
 
 <script setup>
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
+import InputText from 'primevue/inputtext'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 
-defineProps({
+const props = defineProps({
   scans: {
     type: Array,
     default: () => []
@@ -56,4 +74,15 @@ defineProps({
 })
 
 defineEmits(['delete'])
+
+const searchTerm = ref('')
+
+const filteredScans = computed(() => {
+  const term = searchTerm.value.trim().toLowerCase()
+  if (!term) {
+    return props.scans
+  }
+
+  return props.scans.filter((scan) => (scan.title || '').toLowerCase().includes(term))
+})
 </script>

@@ -28,6 +28,10 @@ export async function fetchMetrics(caseId) {
   return data
 }
 
+export async function patchScanTitle(caseId, title) {
+  await api.patch(`/scans/${caseId}`, { title })
+}
+
 export async function downloadSlice(caseId, sliceIdx) {
   const { data } = await api.get(`/scans/${caseId}/result/images?slice_idx=${sliceIdx}`, {
     responseType: 'blob'
