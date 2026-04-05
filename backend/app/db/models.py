@@ -11,6 +11,7 @@ class Scan(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     case_id = Column(String, unique=True, index=True, nullable=False)
+    title = Column(String, unique=False, nullable=False)
     status = Column(String, default='uploaded', nullable=False)
     upload_prefix = Column(String, nullable=False)
     result_path = Column(String, nullable=True)

@@ -2,7 +2,6 @@ import io
 import os
 import tempfile
 import uuid
-from asyncio import as_completed
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 

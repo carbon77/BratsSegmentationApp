@@ -4,10 +4,12 @@ from sqlalchemy.orm.session import Session
 
 from app.db.database import get_db
 from app.db.models import Scan
+from app.dto.dto import PatchScanRequest
 from app.services.inference import run_inference
 from app.services.preprocessing import preprocess_case, preprocess_true_mask
 from app.services.results import compute_metrics, get_slice_plot
-from app.services.storage import save_uploaded_files_async, local_paths_for_case, save_result, load_result, delete_scan_files
+from app.services.storage import save_uploaded_files_async, local_paths_for_case, save_result, load_result, \
+    delete_scan_files
 
 router = APIRouter()
 
@@ -34,7 +36,7 @@ async def predict(
     case_id, upload_prefix, s3_paths = save_uploaded_files_async(files)
     print(f'Files uploaded!')
 
-    scan = Scan(case_id=case_id, upload_prefix=upload_prefix, status='uploaded')
+    scan = Scan(case_id=case_id, title=case_id, upload_prefix=upload_prefix, status='uploaded')
     db.add(scan)
     db.commit()
 
@@ -77,6 +79,8 @@ async def get_scans(db: Session = Depends(get_db)):
     scans = db.query(Scan).all()
     return [{
         'case_id': scan.case_id,
+        'title': scan.title,
+        'status': scan.status,
     } for scan in scans]
 
 
@@ -103,6 +107,19 @@ async def delete_scan(case_id: str, db: Session = Depends(get_db)):
         delete_scan_files(scan)
         db.delete(scan)
         db.commit()
+    return Response(status_code=204)
+
+
+@router.patch('/scans/{case_id}')
+async def patch_scan(
+        case_id: str,
+        request: PatchScanRequest,
+        db: Session = Depends(get_db),
+):
+    scan = _get_scan(db, case_id)
+    scan.title = request.title
+    db.add(scan)
+    db.commit()
     return Response(status_code=204)
 
 
