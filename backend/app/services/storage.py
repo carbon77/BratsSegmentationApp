@@ -1,7 +1,6 @@
 import io
 import os
 import tempfile
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 
@@ -40,15 +39,30 @@ def _upload_single(args):
     return name, _to_s3_uri(key)
 
 
-def save_uploaded_files_async(files):
-    case_id = str(uuid.uuid4())
-    upload_prefix = f'uploads/{case_id}'
-
+def save_uploaded_files_async(files, upload_prefix):
     with ThreadPoolExecutor(max_workers=8) as executor:
         args = [(name, file, upload_prefix) for name, file in files.items()]
         s3_paths = executor.map(_upload_single, args)
-        paths = {name: path for name, path in s3_paths}
-    return case_id, upload_prefix, paths
+        return {name: path for name, path in s3_paths}
+
+
+def _upload_single_from_bytes(args):
+    name, content, upload_prefix = args
+    key = f'{upload_prefix}/{name}.nii'
+    print(f'Uploading file key={key}')
+
+    buffer = io.BytesIO(content)
+    _s3.upload_fileobj(buffer, S3_BUCKET, key)
+
+    print(f'File uploaded key={key}')
+    return name, _to_s3_uri(key)
+
+
+def save_uploaded_files_from_bytes_async(files, upload_prefix):
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        args = [(name, content, upload_prefix) for name, content in files.items()]
+        s3_paths = executor.map(_upload_single_from_bytes, args)
+        return {name: path for name, path in s3_paths}
 
 
 def delete_scan_files(scan: type[Scan]):
