@@ -14,7 +14,9 @@ export async function fetchScans() {
 export async function uploadScan(filesByModality) {
   const formData = new FormData()
   Object.entries(filesByModality).forEach(([modality, file]) => {
-    formData.append(modality, file)
+    if (file) {
+      formData.append(modality, file)
+    }
   })
 
   const { data } = await api.post('/predict', formData)

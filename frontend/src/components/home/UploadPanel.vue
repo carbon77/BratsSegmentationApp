@@ -51,6 +51,29 @@
           />
         </div>
 
+        <div class="rounded-xl border border-emerald-500/30 bg-slate-800/70 p-4">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <p class="font-medium uppercase tracking-wide text-emerald-100">true mask (optional)</p>
+              <p class="text-sm text-slate-300">{{ selectedName('true_mask') }}</p>
+            </div>
+            <Button
+              :label="modelValue.true_mask ? 'Replace file' : 'Choose file'"
+              icon="pi pi-upload"
+              outlined
+              class="!border-emerald-400 !text-emerald-200"
+              @click="openPicker('true_mask')"
+            />
+          </div>
+          <input
+            :ref="(el) => setFileInputRef('true_mask', el)"
+            class="hidden"
+            type="file"
+            accept=".nii,.nii.gz"
+            @change="onFileSelected($event, 'true_mask')"
+          />
+        </div>
+
         <div class="flex items-center gap-3">
           <Button
             label="Create scan"
@@ -60,7 +83,7 @@
             class="!bg-violet-600 !border-violet-500 hover:!bg-violet-500"
             @click="$emit('submit')"
           />
-          <small class="text-slate-300">All 4 modalities are required.</small>
+          <small class="text-slate-300">All 4 modalities are required. True mask is optional.</small>
         </div>
 
         <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>

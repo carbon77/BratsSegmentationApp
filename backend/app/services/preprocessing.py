@@ -24,3 +24,18 @@ def preprocess_case(files_dict):
     X /= np.max(X)
     X = torch.FloatTensor(X).permute(3, 0, 1, 2).unsqueeze(0)
     return X
+
+
+def preprocess_true_mask(mask_path):
+    mask = load_nifti(mask_path)
+    y = np.zeros((VOLUME_SLICES, IMG_SIZE, IMG_SIZE), dtype=np.int32)
+
+    for j in range(VOLUME_SLICES):
+        slice_pos = j + VOLUME_START_AT
+        y[j, :, :] = cv2.resize(
+            mask[:, :, slice_pos],
+            (IMG_SIZE, IMG_SIZE),
+            interpolation=cv2.INTER_NEAREST,
+        )
+
+    return y

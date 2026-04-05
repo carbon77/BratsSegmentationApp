@@ -34,7 +34,8 @@ const selectedFiles = ref({
   t1: null,
   t1ce: null,
   t2: null,
-  flair: null
+  flair: null,
+  true_mask: null
 })
 
 const scans = ref([])
