@@ -23,11 +23,12 @@ App where user can upload nifti files of mri scans and make segmentation masks
 
 ## API
 
-- `POST /predict` – uploads MRI modalities, runs inference, persists results.
-- `GET /scans` – returns all scans case ids
-- `GET /scans/{case_id}/result/metrics` – returns persisted segmentation metrics.
-- `GET /scans/{case_id}/result/images?slice_idx=60` – returns prediction mask slice plot using `matplotlib`
-- `DELETE /scans/{case_id}` – delete scan metadata and files
+- `POST /predict` - uploads MRI modalities, runs inference, persists results.
+- `GET /scans` - returns all scans case ids
+- `GET /scans/{case_id}/result/metrics` - returns persisted segmentation metrics.
+- `GET /scans/{case_id}/result/images?slice_idx=60` - returns prediction mask slice plot using `matplotlib`
+- `DELETE /scans/{case_id}` - delete scan metadata and files
+- `PATCH /scans/{case_id}` - patch scan metadata
 
 ## Environment variables
 
