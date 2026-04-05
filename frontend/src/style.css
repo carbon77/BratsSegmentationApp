@@ -1,48 +1,140 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
 
 body {
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: #020617;
+  background: #f4f6fb;
 }
 
-.p-card {
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
-  border: 1px solid rgba(71, 85, 105, 0.35);
-  color: #e2e8f0;
+#app {
+  min-height: 100vh;
 }
 
-.p-card .p-card-title {
-  color: #e2e8f0;
+.app-shell {
+  min-height: 100vh;
 }
 
-.p-button {
-  border-radius: 0.75rem;
-  font-weight: 600;
+.app-toolbar {
+  border-radius: 0;
+  border: none;
+  background: linear-gradient(90deg, #312e81, #0f172a 50%, #155e75);
 }
 
-.p-inputtext,
-.p-inputnumber-input {
-  border-radius: 0.7rem;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  color: #bae6fd;
+.brand-link {
+  color: #e0f2fe;
+  text-decoration: none;
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 
-.metrics-table .p-datatable-table {
-  border: 1px solid rgba(217, 70, 239, 0.2);
+.page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
 }
 
-.metrics-table .p-datatable-thead > tr > th {
-  background: rgba(76, 29, 149, 0.45);
-  color: #e9d5ff;
-  border-color: rgba(217, 70, 239, 0.25);
+.home-page,
+.scan-content,
+.upload-panel-content {
+  display: grid;
+  gap: 1rem;
 }
 
-.metrics-table .p-datatable-tbody > tr > td {
-  background: rgba(15, 23, 42, 0.7);
-  color: #e2e8f0;
-  border-color: rgba(100, 116, 139, 0.35);
+.home-splitter {
+  min-height: 600px;
+}
+
+.section-block {
+  margin: 0;
+}
+
+.section-caption {
+  margin: 0 0 0.75rem;
+  color: #475569;
+}
+
+.modality-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.modality-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.modality-label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.modality-name {
+  color: #475569;
+}
+
+.row-actions,
+.submit-row,
+.table-actions,
+.scan-header,
+.button-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.submit-row {
+  justify-content: space-between;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.actions-cell {
+  width: 220px;
+}
+
+.metrics-accordion .p-accordion-header-link {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.slice-controls {
+  display: flex;
+  align-items: center;
+}
+
+.field-block {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field-block--wide {
+  min-width: 240px;
+}
+
+.image-wrapper {
+  margin-top: 0.75rem;
+}
+
+.slice-image {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .slice-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .home-splitter {
+    min-height: 780px;
+  }
 }

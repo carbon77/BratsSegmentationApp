@@ -1,21 +1,25 @@
 <template>
-  <section class="space-y-4">
+  <section class="home-page">
     <Message v-if="pageError" severity="error">{{ pageError }}</Message>
 
-    <div class="grid gap-6 lg:grid-cols-2">
-      <UploadPanel
-        v-model="selectedFiles"
-        :is-uploading="isUploading"
-        :error-message="uploadError"
-        @submit="submitUpload"
-      />
-      <ScansList
-        :scans="scans"
-        :is-loading="isLoadingScans"
-        :deleting-case-id="deletingCaseId"
-        @delete="handleDeleteScan"
-      />
-    </div>
+    <Splitter class="home-splitter">
+      <SplitterPanel :size="55" :min-size="40">
+        <UploadPanel
+          v-model="selectedFiles"
+          :is-uploading="isUploading"
+          :error-message="uploadError"
+          @submit="submitUpload"
+        />
+      </SplitterPanel>
+      <SplitterPanel :size="45" :min-size="30">
+        <ScansList
+          :scans="scans"
+          :is-loading="isLoadingScans"
+          :deleting-case-id="deletingCaseId"
+          @delete="handleDeleteScan"
+        />
+      </SplitterPanel>
+    </Splitter>
   </section>
 </template>
 
@@ -23,6 +27,8 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Message from 'primevue/message'
+import Splitter from 'primevue/splitter'
+import SplitterPanel from 'primevue/splitterpanel'
 
 import ScansList from '../components/home/ScansList.vue'
 import UploadPanel from '../components/home/UploadPanel.vue'

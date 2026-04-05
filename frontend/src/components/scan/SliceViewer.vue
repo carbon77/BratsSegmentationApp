@@ -1,51 +1,45 @@
 <template>
-  <div class="rounded-xl border border-cyan-500/30 bg-slate-800/70 p-4">
-    <h3 class="mb-3 text-lg font-medium text-cyan-200">Segmentation slice</h3>
-
-    <div class="mb-4 flex flex-wrap items-end gap-3">
-      <div>
-        <label class="mb-2 block text-sm text-slate-300">Slice index</label>
-        <InputNumber
-          v-model="localSliceIdx"
-          :min="0"
-          inputId="sliceIdx"
-          inputClass="!bg-slate-900 !text-cyan-100 !border-cyan-600/60"
+  <Panel header="Segmentation slice">
+    <div class="slice-controls">
+      <div class="field-block">
+        <label for="sliceIdx">Slice index</label>
+        <InputNumber v-model="localSliceIdx" :min="0" inputId="sliceIdx" />
+      </div>
+      <div class="field-block field-block--wide">
+        <label for="sliceSlider">Quick adjust</label>
+        <Slider id="sliceSlider" v-model="localSliceIdx" :min="0" :max="155" />
+      </div>
+      <div class="button-row">
+        <Button label="Load image" icon="pi pi-image" :loading="isLoading" @click="loadImage" />
+        <Button
+          label="Download image"
+          icon="pi pi-download"
+          severity="secondary"
+          :loading="isDownloading"
+          :disabled="!imageSrc"
+          outlined
+          @click="downloadImage"
         />
       </div>
-
-      <Button
-        label="Load image"
-        icon="pi pi-image"
-        :loading="isLoading"
-        class="!bg-cyan-600 !border-cyan-500 hover:!bg-cyan-500"
-        @click="loadImage"
-      />
-      <Button
-        label="Download image"
-        icon="pi pi-download"
-        severity="secondary"
-        :loading="isDownloading"
-        :disabled="!imageSrc"
-        class="!border-violet-400 !text-violet-200"
-        outlined
-        @click="downloadImage"
-      />
     </div>
 
     <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
 
-    <div v-if="imageSrc" class="rounded-lg border border-slate-700 bg-slate-950 p-2">
-      <img :src="imageSrc" alt="Segmentation mask slice" class="mx-auto max-h-[500px] rounded" />
+    <div v-if="imageSrc" class="image-wrapper">
+      <Image :src="imageSrc" alt="Segmentation mask slice" preview imageClass="slice-image" />
     </div>
-    <p v-else class="text-slate-400">Load a slice image to preview segmentation mask.</p>
-  </div>
+    <Message v-else severity="warn">Load a slice image to preview segmentation mask.</Message>
+  </Panel>
 </template>
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import Button from 'primevue/button'
+import Image from 'primevue/image'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
+import Panel from 'primevue/panel'
+import Slider from 'primevue/slider'
 
 import { downloadSlice } from '../../services/api'
 

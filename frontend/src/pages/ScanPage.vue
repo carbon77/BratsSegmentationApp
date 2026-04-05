@@ -1,9 +1,9 @@
 <template>
-  <section class="space-y-4">
-    <Card>
-      <template #title>
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <span class="text-indigo-200">Scan {{ caseId }}</span>
+  <section>
+    <Panel>
+      <template #header>
+        <div class="scan-header">
+          <Tag :value="`Scan ${caseId}`" severity="info" />
           <Button
             label="Delete scan"
             icon="pi pi-trash"
@@ -14,18 +14,16 @@
           />
         </div>
       </template>
-      <template #content>
-        <div v-if="isLoading" class="py-4">
-          <ProgressSpinner style="width: 34px; height: 34px" strokeWidth="6" />
-        </div>
 
-        <div v-else class="space-y-4">
-          <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
-          <MetricsTable :metrics="metrics" />
-          <SliceViewer :case-id="caseId" :initial-slice="60" />
-        </div>
-      </template>
-    </Card>
+      <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
+
+      <div v-else class="scan-content">
+        <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+        <MetricsTable :metrics="metrics" />
+        <Divider />
+        <SliceViewer :case-id="caseId" :initial-slice="60" />
+      </div>
+    </Panel>
   </section>
 </template>
 
@@ -33,9 +31,11 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
-import Card from 'primevue/card'
+import Divider from 'primevue/divider'
 import Message from 'primevue/message'
+import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
+import Tag from 'primevue/tag'
 
 import MetricsTable from '../components/scan/MetricsTable.vue'
 import SliceViewer from '../components/scan/SliceViewer.vue'

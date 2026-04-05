@@ -1,102 +1,94 @@
 <template>
-  <Card class="h-full">
-    <template #title>
-      <span class="text-cyan-200">Upload MRI modalities</span>
-    </template>
-    <template #content>
-      <div class="space-y-4">
-        <div class="rounded-xl border border-cyan-500/30 bg-slate-800/80 p-4">
-          <div class="mb-3 flex items-center justify-between gap-4">
-            <div>
-              <p class="font-medium text-cyan-100">Select all modalities</p>
-              <p class="text-xs text-slate-300">Choose four .nii files in one action.</p>
-            </div>
-            <Button label="Choose 4 files" icon="pi pi-folder-open" outlined class="!border-cyan-400 !text-cyan-200" @click="openAllPicker" />
-          </div>
-          <input
-            ref="allInputRef"
-            class="hidden"
-            type="file"
-            accept=".nii,.nii.gz"
-            multiple
-            @change="onAllFilesSelected"
-          />
-          <small class="text-slate-400">Matched by filename keywords: t1, t1ce, t2, flair.</small>
-        </div>
+  <Panel header="Upload MRI modalities" toggleable>
+    <div class="upload-panel-content">
+      <Fieldset legend="Automatic assignment" class="section-block">
+        <p class="section-caption">Select 4 files in one action; filenames are mapped by keywords: t1, t1ce, t2, flair.</p>
+        <Button label="Choose 4 files" icon="pi pi-folder-open" @click="openAllPicker" />
+        <input
+          ref="allInputRef"
+          class="hidden-input"
+          type="file"
+          accept=".nii,.nii.gz"
+          multiple
+          @change="onAllFilesSelected"
+        />
+      </Fieldset>
 
-        <div
-          v-for="modality in modalities"
-          :key="modality"
-          class="rounded-xl border border-violet-500/30 bg-slate-800/70 p-4"
-        >
-          <div class="flex items-center justify-between gap-4">
+      <Fieldset legend="Required modalities" class="section-block">
+        <div class="modality-grid">
+          <div v-for="modality in modalities" :key="modality" class="modality-row">
             <div>
-              <p class="font-medium uppercase tracking-wide text-violet-100">{{ modality }}</p>
-              <p class="text-sm text-slate-300">{{ selectedName(modality) }}</p>
+              <div class="modality-label">{{ modality.toUpperCase() }}</div>
+              <small class="modality-name">{{ selectedName(modality) }}</small>
             </div>
+            <div class="row-actions">
+              <Tag :value="modelValue[modality] ? 'Selected' : 'Missing'" :severity="modelValue[modality] ? 'success' : 'warning'" />
+              <Button
+                :label="modelValue[modality] ? 'Replace' : 'Choose'"
+                icon="pi pi-upload"
+                outlined
+                @click="openPicker(modality)"
+              />
+              <input
+                :ref="(el) => setFileInputRef(modality, el)"
+                class="hidden-input"
+                type="file"
+                accept=".nii,.nii.gz"
+                @change="onFileSelected($event, modality)"
+              />
+            </div>
+          </div>
+        </div>
+      </Fieldset>
+
+      <Fieldset legend="Optional true mask" class="section-block">
+        <div class="modality-row">
+          <div>
+            <div class="modality-label">TRUE_MASK</div>
+            <small class="modality-name">{{ selectedName('true_mask') }}</small>
+          </div>
+          <div class="row-actions">
+            <Tag :value="modelValue.true_mask ? 'Selected' : 'Optional'" :severity="modelValue.true_mask ? 'success' : 'info'" />
             <Button
-              :label="modelValue[modality] ? 'Replace file' : 'Choose file'"
+              :label="modelValue.true_mask ? 'Replace' : 'Choose'"
               icon="pi pi-upload"
               outlined
-              class="!border-violet-400 !text-violet-200"
-              @click="openPicker(modality)"
-            />
-          </div>
-          <input
-            :ref="(el) => setFileInputRef(modality, el)"
-            class="hidden"
-            type="file"
-            accept=".nii,.nii.gz"
-            @change="onFileSelected($event, modality)"
-          />
-        </div>
-
-        <div class="rounded-xl border border-emerald-500/30 bg-slate-800/70 p-4">
-          <div class="flex items-center justify-between gap-4">
-            <div>
-              <p class="font-medium uppercase tracking-wide text-emerald-100">true mask (optional)</p>
-              <p class="text-sm text-slate-300">{{ selectedName('true_mask') }}</p>
-            </div>
-            <Button
-              :label="modelValue.true_mask ? 'Replace file' : 'Choose file'"
-              icon="pi pi-upload"
-              outlined
-              class="!border-emerald-400 !text-emerald-200"
               @click="openPicker('true_mask')"
             />
           </div>
-          <input
-            :ref="(el) => setFileInputRef('true_mask', el)"
-            class="hidden"
-            type="file"
-            accept=".nii,.nii.gz"
-            @change="onFileSelected($event, 'true_mask')"
-          />
         </div>
+        <input
+          :ref="(el) => setFileInputRef('true_mask', el)"
+          class="hidden-input"
+          type="file"
+          accept=".nii,.nii.gz"
+          @change="onFileSelected($event, 'true_mask')"
+        />
+      </Fieldset>
 
-        <div class="flex items-center gap-3">
-          <Button
-            label="Create scan"
-            icon="pi pi-cloud-upload"
-            :loading="isUploading"
-            :disabled="!allModalitiesSelected || isUploading"
-            class="!bg-violet-600 !border-violet-500 hover:!bg-violet-500"
-            @click="$emit('submit')"
-          />
-          <small class="text-slate-300">All 4 modalities are required. True mask is optional.</small>
-        </div>
-
-        <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+      <div class="submit-row">
+        <Button
+          label="Create scan"
+          icon="pi pi-cloud-upload"
+          :loading="isUploading"
+          :disabled="!allModalitiesSelected || isUploading"
+          @click="$emit('submit')"
+        />
+        <small>All 4 modalities are required for upload.</small>
       </div>
-    </template>
-  </Card>
+
+      <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+    </div>
+  </Panel>
 </template>
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import Button from 'primevue/button'
-import Card from 'primevue/card'
+import Fieldset from 'primevue/fieldset'
 import Message from 'primevue/message'
+import Panel from 'primevue/panel'
+import Tag from 'primevue/tag'
 
 const props = defineProps({
   modelValue: {
