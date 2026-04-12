@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm.session import Session
@@ -5,11 +7,9 @@ from sqlalchemy.orm.session import Session
 from app.db.database import get_db
 from app.db.models import Scan
 from app.dto.dto import PatchScanRequest
-from app.services.inference import run_inference
-from app.services.preprocessing import preprocess_case, preprocess_true_mask
-from app.services.results import compute_metrics, get_slice_plot
-from app.services.storage import save_uploaded_files_async, local_paths_for_case, save_result, load_result, \
-    delete_scan_files
+from app.services.queue import enqueue_scan_job, ScanJob
+from app.services.results import get_slice_plot
+from app.services.storage import save_uploaded_files_async, load_result, delete_scan_files
 
 router = APIRouter()
 
@@ -32,34 +32,17 @@ async def predict(
     if true_mask is not None:
         files['true_mask'] = true_mask
 
-    print(f'Uploading files...')
-    case_id, upload_prefix, s3_paths = save_uploaded_files_async(files)
-    print(f'Files uploaded!')
+    case_id, upload_prefix, s3_paths = await asyncio.to_thread(save_uploaded_files_async, files)
 
-    scan = Scan(case_id=case_id, title=case_id, upload_prefix=upload_prefix, status='uploaded')
+    scan = Scan(case_id=case_id, title=case_id, upload_prefix=upload_prefix, status='queued')
     db.add(scan)
     db.commit()
 
-    print('Preprocessing files...')
-    with local_paths_for_case(s3_paths) as local_paths:
-        modality_paths = {modality: local_paths[modality] for modality in ('t1', 't1ce', 't2', 'flair')}
-        tensor = preprocess_case(modality_paths)
-        true_mask_volume = preprocess_true_mask(local_paths['true_mask']) if 'true_mask' in local_paths else None
-    prediction = run_inference(tensor)
-    metrics = compute_metrics(prediction, true_mask_volume)
-    result_path = save_result(case_id, prediction)
-    print('Files processed!')
-
-    scan.status = 'completed'
-    scan.result_path = result_path
-    scan.metrics = metrics
-    db.add(scan)
-    db.commit()
+    enqueue_scan_job(ScanJob(case_id=case_id, s3_paths=s3_paths))
 
     return {
         'case_id': case_id,
-        'result_path': result_path,
-        'metrics': metrics,
+        'status': 'queued',
     }
 
 
@@ -94,7 +77,7 @@ async def result_images(
     if scan.status != 'completed' or not scan.result_path:
         raise HTTPException(status_code=400, detail='Scan result not ready')
 
-    prediction = load_result(scan.result_path)
+    prediction = await asyncio.to_thread(load_result, scan.result_path)
     buf = get_slice_plot(prediction, slice_idx)
     buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
@@ -104,7 +87,7 @@ async def result_images(
 async def delete_scan(case_id: str, db: Session = Depends(get_db)):
     scan = db.query(Scan).filter(Scan.case_id == case_id).first()
     if scan:
-        delete_scan_files(scan)
+        await asyncio.to_thread(delete_scan_files, scan)
         db.delete(scan)
         db.commit()
     return Response(status_code=204)
