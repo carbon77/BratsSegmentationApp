@@ -10,7 +10,7 @@ model = BratsUNet(
     n_classes=4,
     n_channels=16,
 )
-model.load_state_dict(torch.load('../model/model.pth', map_location=DEVICE))
+model.load_state_dict(torch.load('model.pth', map_location=DEVICE))
 model.to(DEVICE)
 model.eval()
 
