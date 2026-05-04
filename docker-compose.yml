@@ -18,7 +18,7 @@ services:
       context: ./backend
     ports:
       - 8000:8000
-    env_file: "/backend/.env"
+    env_file: "./backend/.env"
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/brats
     #   AWS_S3_BUCKET: ${AWS_S3_BUCKET:-brats}
@@ -30,23 +30,24 @@ services:
       postgres:
         condition: service_healthy
 
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #   container_name: brats-frontend
-  #   depends_on:
-  #     - backend
-  #
-  # nginx:
-  #   image: nginx:1.27-alpine
-  #   container_name: brats-nginx
-  #   ports:
-  #     - "80:80"
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-  #   depends_on:
-  #     - frontend
-  #     - backend
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "4173:4173"
+    depends_on:
+      - backend
+  
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: brats-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
 
 volumes:
   postgres_data:
