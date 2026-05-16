@@ -10,6 +10,8 @@ CLASS_LABELS = {
     3: 'enhancing',
 }
 
+SEGMENTATION_CMAP = plt.get_cmap('viridis', len(CLASS_LABELS))
+
 
 def _overlap_metrics(pred_binary: np.ndarray, true_binary: np.ndarray) -> dict:
     pred_sum = int(np.count_nonzero(pred_binary))
@@ -65,15 +67,51 @@ def compute_metrics(prediction: np.ndarray, true_mask: np.ndarray | None = None)
     return metrics
 
 
-def get_slice_plot(prediction: np.ndarray, slice_idx: int):
-    y = prediction[:, slice_idx, :, :].squeeze(0)
+def _normalize_background(background_slice: np.ndarray) -> np.ndarray:
+    background = background_slice.astype(np.float32)
+    lower, upper = np.percentile(background, [1, 99])
+    if upper > lower:
+        background = np.clip(background, lower, upper)
+
+    min_value = float(np.min(background))
+    max_value = float(np.max(background))
+    if max_value > min_value:
+        background = (background - min_value) / (max_value - min_value)
+    return background
+
+
+def get_slice_plot(
+    prediction: np.ndarray,
+    slice_idx: int,
+    background_slice: np.ndarray | None = None,
+    modality: str | None = None,
+):
+    volume = prediction[0] if prediction.ndim == 4 else prediction
+    y = volume[slice_idx, :, :]
 
     fig, ax = plt.subplots()
-    im = ax.imshow(y)
-    plt.title(f'Slice {slice_idx}')
-    plt.colorbar(im, ax=ax)
+    if background_slice is None:
+        im = ax.imshow(y, vmin=0, vmax=max(CLASS_LABELS), cmap=SEGMENTATION_CMAP)
+        fig.colorbar(im, ax=ax, ticks=list(CLASS_LABELS.keys()))
+        title = f'Segmentation mask - slice {slice_idx}'
+    else:
+        ax.imshow(_normalize_background(background_slice), cmap='gray')
+        masked_prediction = np.ma.masked_where(y == 0, y)
+        im = ax.imshow(
+            masked_prediction,
+            vmin=0,
+            vmax=max(CLASS_LABELS),
+            cmap=SEGMENTATION_CMAP,
+            alpha=0.55,
+        )
+        fig.colorbar(im, ax=ax, ticks=list(CLASS_LABELS.keys()))
+        title = f'Segmentation on {modality.upper()} - slice {slice_idx}'
+
+    ax.set_title(title)
+    ax.axis('off')
+    fig.tight_layout()
 
     buf = io.BytesIO()
-    plt.savefig(buf, format='png')
+    plt.savefig(buf, format='png', dpi=150)
     plt.close(fig)
     return buf

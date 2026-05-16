@@ -59,6 +59,10 @@ def save_uploaded_files_async(files):
     return case_id, upload_prefix, paths
 
 
+def uploaded_file_uri(upload_prefix: str, name: str) -> str:
+    return _to_s3_uri(f'{upload_prefix}/{name}.nii')
+
+
 def delete_scan_files(scan: type[Scan]):
     for_deletion = [
         {'Key': f'{scan.upload_prefix}/{modality}.nii'}
