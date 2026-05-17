@@ -3,7 +3,8 @@ import axios from 'axios'
 const api = axios.create({
   headers: {
     Accept: 'application/json'
-  }
+  },
+  baseURL: '/api'
 })
 
 export async function fetchScans() {
@@ -32,8 +33,14 @@ export async function patchScanTitle(caseId, title) {
   await api.patch(`/scans/${caseId}`, { title })
 }
 
-export async function downloadSlice(caseId, sliceIdx) {
-  const { data } = await api.get(`/scans/${caseId}/result/images?slice_idx=${sliceIdx}`, {
+export async function downloadSlice(caseId, sliceIdx, overlayModality = null) {
+  const params = { slice_idx: sliceIdx }
+  if (overlayModality) {
+    params.overlay_modality = overlayModality
+  }
+
+  const { data } = await api.get(`/scans/${caseId}/result/images`, {
+    params,
     responseType: 'blob'
   })
   return data

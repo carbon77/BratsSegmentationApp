@@ -39,3 +39,15 @@ def preprocess_true_mask(mask_path):
         )
 
     return y
+
+
+def preprocess_modality_slice(modality_path, slice_idx: int):
+    image = load_nifti(modality_path)
+    slice_pos = slice_idx + VOLUME_START_AT
+    if slice_idx < 0 or slice_pos >= image.shape[2]:
+        raise IndexError('Slice index out of range')
+
+    return cv2.resize(
+        image[:, :, slice_pos],
+        (IMG_SIZE, IMG_SIZE),
+    )

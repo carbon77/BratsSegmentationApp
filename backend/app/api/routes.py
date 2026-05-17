@@ -6,12 +6,14 @@ from app.db.database import get_db
 from app.db.models import Scan
 from app.dto.dto import PatchScanRequest
 from app.services.inference import run_inference
-from app.services.preprocessing import preprocess_case, preprocess_true_mask
+from app.services.preprocessing import preprocess_case, preprocess_true_mask, preprocess_modality_slice
 from app.services.results import compute_metrics, get_slice_plot
 from app.services.storage import save_uploaded_files_async, local_paths_for_case, save_result, load_result, \
-    delete_scan_files
+    delete_scan_files, uploaded_file_uri
 
 router = APIRouter()
+
+MODALITIES = ('t1', 't1ce', 't2', 'flair')
 
 
 @router.post("/predict")
@@ -42,7 +44,7 @@ async def predict(
 
     print('Preprocessing files...')
     with local_paths_for_case(s3_paths) as local_paths:
-        modality_paths = {modality: local_paths[modality] for modality in ('t1', 't1ce', 't2', 'flair')}
+        modality_paths = {modality: local_paths[modality] for modality in MODALITIES}
         tensor = preprocess_case(modality_paths)
         true_mask_volume = preprocess_true_mask(local_paths['true_mask']) if 'true_mask' in local_paths else None
     prediction = run_inference(tensor)
@@ -87,15 +89,38 @@ async def get_scans(db: Session = Depends(get_db)):
 @router.get('/scans/{case_id}/result/images')
 async def result_images(
         case_id: str,
-        slice_idx: int = Query(1, description='Slice index to return.'),
+        slice_idx: int = Query(1, ge=0, description='Slice index to return.'),
+        overlay_modality: str | None = Query(
+            None,
+            description='MRI modality to draw underneath the segmentation mask. Omit for mask only.',
+        ),
         db: Session = Depends(get_db),
 ):
     scan = _get_scan(db, case_id)
     if scan.status != 'completed' or not scan.result_path:
         raise HTTPException(status_code=400, detail='Scan result not ready')
 
+    if overlay_modality is not None and overlay_modality not in MODALITIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f'overlay_modality must be one of: {", ".join(MODALITIES)}',
+        )
+
     prediction = load_result(scan.result_path)
-    buf = get_slice_plot(prediction, slice_idx)
+    volume = prediction[0] if prediction.ndim == 4 else prediction
+    if slice_idx >= volume.shape[0]:
+        raise HTTPException(status_code=400, detail=f'slice_idx must be between 0 and {volume.shape[0] - 1}')
+
+    background_slice = None
+    if overlay_modality is not None:
+        modality_uri = uploaded_file_uri(scan.upload_prefix, overlay_modality)
+        with local_paths_for_case({overlay_modality: modality_uri}) as local_paths:
+            try:
+                background_slice = preprocess_modality_slice(local_paths[overlay_modality], slice_idx)
+            except IndexError as exc:
+                raise HTTPException(status_code=400, detail='slice_idx is outside the uploaded MRI volume') from exc
+
+    buf = get_slice_plot(prediction, slice_idx, background_slice, overlay_modality)
     buf.seek(0)
     return StreamingResponse(buf, media_type="image/png")
 
