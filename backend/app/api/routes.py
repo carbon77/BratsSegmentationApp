@@ -1,13 +1,14 @@
 import asyncio
 import json
 
-from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException, status
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm.session import Session
 
 from app.db.database import get_db, SessionLocal
-from app.db.models import Scan
-from app.dto.dto import PatchScanRequest
+from app.db.models import Scan, User
+from app.dto.dto import AuthRequest, PatchScanRequest, RegisterRequest
+from app.services.auth import create_access_token, get_current_user, hash_password, verify_password
 from app.services.preprocessing import preprocess_modality_slice
 from app.services.results import get_slice_plot
 from app.services.storage import stage_uploaded_files, local_paths_for_case, load_result, \
@@ -19,12 +20,54 @@ router = APIRouter()
 MODALITIES = ('t1', 't1ce', 't2', 'flair')
 
 
+def _user_to_dict(user: User) -> dict:
+    return {
+        'id': user.id,
+        'name': user.name,
+        'email': user.email,
+    }
+
+
+def _auth_response(user: User) -> dict:
+    return {
+        'access_token': create_access_token(user),
+        'token_type': 'bearer',
+        'user': _user_to_dict(user),
+    }
+
+
 def _scan_to_dict(scan: Scan) -> dict:
     return {
         'case_id': scan.case_id,
         'title': scan.title,
         'status': scan.status,
     }
+
+
+@router.post('/auth/register', status_code=status.HTTP_201_CREATED)
+async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == request.email).first()
+    if existing_user:
+        raise HTTPException(status_code=409, detail='User with this email already exists')
+
+    user = User(name=request.name, email=request.email, password=hash_password(request.password))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return _auth_response(user)
+
+
+@router.post('/auth/login')
+async def login(request: AuthRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user or not verify_password(request.password, user.password):
+        raise HTTPException(status_code=401, detail='Invalid email or password')
+    return _auth_response(user)
+
+
+@router.get('/auth/me')
+async def me(current_user: User = Depends(get_current_user)):
+    return _user_to_dict(current_user)
 
 
 @router.post('/predict', status_code=202)
@@ -34,7 +77,8 @@ async def predict(
         t2: UploadFile = File(...),
         flair: UploadFile = File(...),
         true_mask: UploadFile | None = File(None),
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
 ):
     files = {
         't1': t1,
@@ -49,7 +93,13 @@ async def predict(
     case_id, upload_prefix, staged_files = await stage_uploaded_files(files)
     print('Files staged!')
 
-    scan = Scan(case_id=case_id, title=case_id, upload_prefix=upload_prefix, status='uploading')
+    scan = Scan(
+        case_id=case_id,
+        title=case_id,
+        upload_prefix=upload_prefix,
+        status='uploading',
+        user_id=current_user.id,
+    )
     db.add(scan)
     db.commit()
 
@@ -66,8 +116,12 @@ async def predict(
 
 
 @router.get('/scans/{case_id}/result/metrics')
-async def result_metrics(case_id: str, db: Session = Depends(get_db)):
-    scan = _get_scan(db, case_id)
+async def result_metrics(
+        case_id: str,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+):
+    scan = _get_scan(db, case_id, current_user)
     if scan.status != 'completed' or not scan.metrics:
         raise HTTPException(status_code=400, detail='Scan results not ready')
     return {
@@ -77,18 +131,23 @@ async def result_metrics(case_id: str, db: Session = Depends(get_db)):
 
 
 @router.get('/scans')
-async def get_scans(db: Session = Depends(get_db)):
-    scans = db.query(Scan).order_by(Scan.created_at.desc()).all()
+async def get_scans(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    scans = db.query(Scan).filter(Scan.user_id == current_user.id).order_by(Scan.created_at.desc()).all()
     return [_scan_to_dict(scan) for scan in scans]
 
 
 @router.get('/scans/events')
-async def scan_events():
+async def scan_events(current_user: User = Depends(get_current_user)):
     async def event_stream():
         last_payload = None
         while True:
             with SessionLocal() as db:
-                scans = db.query(Scan).order_by(Scan.created_at.desc()).all()
+                scans = (
+                    db.query(Scan)
+                    .filter(Scan.user_id == current_user.id)
+                    .order_by(Scan.created_at.desc())
+                    .all()
+                )
                 payload = json.dumps([_scan_to_dict(scan) for scan in scans])
 
             if payload != last_payload:
@@ -117,8 +176,9 @@ async def result_images(
             description='MRI modality to draw underneath the segmentation mask. Omit for mask only.',
         ),
         db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
 ):
-    scan = _get_scan(db, case_id)
+    scan = _get_scan(db, case_id, current_user)
     if scan.status != 'completed' or not scan.result_path:
         raise HTTPException(status_code=400, detail='Scan result not ready')
 
@@ -148,8 +208,12 @@ async def result_images(
 
 
 @router.delete('/scans/{case_id}')
-async def delete_scan(case_id: str, db: Session = Depends(get_db)):
-    scan = db.query(Scan).filter(Scan.case_id == case_id).first()
+async def delete_scan(
+        case_id: str,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+):
+    scan = db.query(Scan).filter(Scan.case_id == case_id, Scan.user_id == current_user.id).first()
     if scan:
         delete_scan_files(scan)
         db.delete(scan)
@@ -162,16 +226,17 @@ async def patch_scan(
         case_id: str,
         request: PatchScanRequest,
         db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
 ):
-    scan = _get_scan(db, case_id)
+    scan = _get_scan(db, case_id, current_user)
     scan.title = request.title
     db.add(scan)
     db.commit()
     return Response(status_code=204)
 
 
-def _get_scan(db: Session, case_id: str) -> type[Scan]:
-    scan = db.query(Scan).filter(Scan.case_id == case_id).first()
+def _get_scan(db: Session, case_id: str, current_user: User) -> Scan:
+    scan = db.query(Scan).filter(Scan.case_id == case_id, Scan.user_id == current_user.id).first()
     if not scan:
         raise HTTPException(status_code=404, detail='scan not found')
     return scan
