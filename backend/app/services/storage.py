@@ -1,5 +1,7 @@
+import asyncio
 import io
 import os
+import shutil
 import tempfile
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +17,7 @@ AWS_REGION = os.getenv('AWS_REGION', 'ru-central1')
 AWS_S3_ACCESS_KEY = os.getenv('AWS_S3_ACCESS_KEY')
 AWS_S3_SECRET_KEY = os.getenv('AWS_S3_SECRET_KEY')
 AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL', 'https://storage.yandexcloud.net')
+UPLOAD_STAGING_DIR = os.getenv('UPLOAD_STAGING_DIR', '/tmp/brats-upload-staging')
 
 _s3 = boto3.client(
     's3',
@@ -36,27 +39,55 @@ def _from_s3_uri(uri: str) -> str:
     return uri.removeprefix(expected_prefix)
 
 
+def _case_staging_dir(case_id: str) -> str:
+    return os.path.join(UPLOAD_STAGING_DIR, case_id)
+
+
+def _copy_upload_to_path(upload_file, path: str) -> None:
+    with open(path, 'wb') as output:
+        shutil.copyfileobj(upload_file, output)
+
+
+async def _stage_single(name: str, upload_file, case_dir: str) -> tuple[str, str]:
+    local_path = os.path.join(case_dir, f'{name}.nii')
+    await upload_file.seek(0)
+    await asyncio.to_thread(_copy_upload_to_path, upload_file.file, local_path)
+    return name, local_path
+
+
+async def stage_uploaded_files(files) -> tuple[str, str, dict[str, str]]:
+    case_id = str(uuid.uuid4())
+    upload_prefix = f'uploads/{case_id}'
+    case_dir = _case_staging_dir(case_id)
+    os.makedirs(case_dir, exist_ok=True)
+
+    staged_files = await asyncio.gather(
+        *(_stage_single(name, file, case_dir) for name, file in files.items())
+    )
+    return case_id, upload_prefix, dict(staged_files)
+
+
 def _upload_single(args):
-    name, file, upload_prefix = args
+    name, path, upload_prefix = args
     key = f'{upload_prefix}/{name}.nii'
     print(f'Uploading file key={key}')
 
-    _s3.upload_fileobj(file.file, S3_BUCKET, key)
+    with open(path, 'rb') as file:
+        _s3.upload_fileobj(file, S3_BUCKET, key)
 
     print(f'File uploaded key={key}')
-    file.file.seek(0)
     return name, _to_s3_uri(key)
 
 
-def save_uploaded_files_async(files):
-    case_id = str(uuid.uuid4())
-    upload_prefix = f'uploads/{case_id}'
-
+def upload_staged_files(staged_files: dict[str, str], upload_prefix: str) -> dict[str, str]:
     with ThreadPoolExecutor(max_workers=8) as executor:
-        args = [(name, file, upload_prefix) for name, file in files.items()]
+        args = [(name, path, upload_prefix) for name, path in staged_files.items()]
         s3_paths = executor.map(_upload_single, args)
-        paths = {name: path for name, path in s3_paths}
-    return case_id, upload_prefix, paths
+        return {name: path for name, path in s3_paths}
+
+
+def delete_staged_files(case_id: str) -> None:
+    shutil.rmtree(_case_staging_dir(case_id), ignore_errors=True)
 
 
 def uploaded_file_uri(upload_prefix: str, name: str) -> str:
@@ -64,6 +95,7 @@ def uploaded_file_uri(upload_prefix: str, name: str) -> str:
 
 
 def delete_scan_files(scan: type[Scan]):
+    delete_staged_files(scan.case_id)
     for_deletion = [
         {'Key': f'{scan.upload_prefix}/{modality}.nii'}
         for modality in ('t1', 't1ce', 't2', 'flair', 'true_mask')

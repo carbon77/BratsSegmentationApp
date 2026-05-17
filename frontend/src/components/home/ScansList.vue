@@ -22,12 +22,18 @@
           <Tag :value="slotProps.data.title || slotProps.data.case_id" />
         </template>
       </Column>
+      <Column field="status" header="Status">
+        <template #body="slotProps">
+          <Tag :value="statusLabel(slotProps.data.status)" :severity="statusSeverity(slotProps.data.status)" />
+        </template>
+      </Column>
       <Column header="Actions" bodyClass="actions-cell">
         <template #body="slotProps">
           <div class="table-actions">
-            <RouterLink :to="`/scans/${slotProps.data.case_id}`">
+            <RouterLink v-if="slotProps.data.status === 'completed'" :to="`/scans/${slotProps.data.case_id}`">
               <Button size="small" icon="pi pi-external-link" label="Open" text />
             </RouterLink>
+            <Button v-else size="small" icon="pi pi-clock" :label="actionUnavailableLabel(slotProps.data.status)" text disabled />
             <Button
               size="small"
               label="Delete"
@@ -75,7 +81,36 @@ const props = defineProps({
 
 defineEmits(['delete'])
 
+const statusLabels = {
+  uploading: 'Uploading',
+  processing: 'Processing',
+  completed: 'Completed',
+  failed: 'Failed',
+  uploaded: 'Uploaded'
+}
+
+const statusSeverities = {
+  uploading: 'info',
+  processing: 'warn',
+  completed: 'success',
+  failed: 'danger',
+  uploaded: 'info'
+}
+
 const searchTerm = ref('')
+
+function statusLabel(status) {
+  return statusLabels[status] ?? status
+}
+
+function statusSeverity(status) {
+  return statusSeverities[status] ?? 'secondary'
+}
+
+function actionUnavailableLabel(status) {
+  if (status === 'failed') return 'Failed'
+  return status === 'uploading' ? 'Uploading' : 'Processing'
+}
 
 const filteredScans = computed(() => {
   const term = searchTerm.value.trim().toLowerCase()

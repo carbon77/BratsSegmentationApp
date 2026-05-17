@@ -14,6 +14,6 @@ ENV UV_NO_DEV=1
 
 WORKDIR /app
 
-RUN uv sync --locked
+RUN uv sync
 
 CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--port", "8000", "--host", "0.0.0.0"]

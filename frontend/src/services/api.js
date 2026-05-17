@@ -49,3 +49,18 @@ export async function downloadSlice(caseId, sliceIdx, overlayModality = null) {
 export async function deleteScan(caseId) {
   await api.delete(`/scans/${caseId}`)
 }
+
+
+export function subscribeToScans(onScans, onError) {
+  const eventSource = new EventSource('/api/scans/events')
+
+  eventSource.addEventListener('scans', (event) => {
+    onScans(JSON.parse(event.data))
+  })
+
+  if (onError) {
+    eventSource.onerror = onError
+  }
+
+  return () => eventSource.close()
+}
