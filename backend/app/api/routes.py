@@ -1,22 +1,33 @@
+import asyncio
+import json
+
 from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm.session import Session
 
-from app.db.database import get_db
+from app.db.database import get_db, SessionLocal
 from app.db.models import Scan
 from app.dto.dto import PatchScanRequest
-from app.services.inference import run_inference
-from app.services.preprocessing import preprocess_case, preprocess_true_mask, preprocess_modality_slice
-from app.services.results import compute_metrics, get_slice_plot
-from app.services.storage import save_uploaded_files_async, local_paths_for_case, save_result, load_result, \
+from app.services.preprocessing import preprocess_modality_slice
+from app.services.results import get_slice_plot
+from app.services.storage import save_uploaded_files_async, local_paths_for_case, load_result, \
     delete_scan_files, uploaded_file_uri
+from app.services.tasks import enqueue_segmentation_task
 
 router = APIRouter()
 
 MODALITIES = ('t1', 't1ce', 't2', 'flair')
 
 
-@router.post("/predict")
+def _scan_to_dict(scan: Scan) -> dict:
+    return {
+        'case_id': scan.case_id,
+        'title': scan.title,
+        'status': scan.status,
+    }
+
+
+@router.post('/predict', status_code=202)
 async def predict(
         t1: UploadFile = File(...),
         t1ce: UploadFile = File(...),
@@ -26,43 +37,31 @@ async def predict(
         db: Session = Depends(get_db)
 ):
     files = {
-        "t1": t1,
-        "t1ce": t1ce,
-        "t2": t2,
-        "flair": flair,
+        't1': t1,
+        't1ce': t1ce,
+        't2': t2,
+        'flair': flair,
     }
     if true_mask is not None:
         files['true_mask'] = true_mask
 
-    print(f'Uploading files...')
+    print('Uploading files...')
     case_id, upload_prefix, s3_paths = save_uploaded_files_async(files)
-    print(f'Files uploaded!')
+    print('Files uploaded!')
 
-    scan = Scan(case_id=case_id, title=case_id, upload_prefix=upload_prefix, status='uploaded')
+    scan = Scan(case_id=case_id, title=case_id, upload_prefix=upload_prefix, status='processing')
     db.add(scan)
     db.commit()
 
-    print('Preprocessing files...')
-    with local_paths_for_case(s3_paths) as local_paths:
-        modality_paths = {modality: local_paths[modality] for modality in MODALITIES}
-        tensor = preprocess_case(modality_paths)
-        true_mask_volume = preprocess_true_mask(local_paths['true_mask']) if 'true_mask' in local_paths else None
-    prediction = run_inference(tensor)
-    metrics = compute_metrics(prediction, true_mask_volume)
-    result_path = save_result(case_id, prediction)
-    print('Files processed!')
+    try:
+        await enqueue_segmentation_task(case_id, s3_paths)
+    except Exception as exc:
+        scan.status = 'failed'
+        db.add(scan)
+        db.commit()
+        raise HTTPException(status_code=503, detail='Could not enqueue segmentation task') from exc
 
-    scan.status = 'completed'
-    scan.result_path = result_path
-    scan.metrics = metrics
-    db.add(scan)
-    db.commit()
-
-    return {
-        'case_id': case_id,
-        'result_path': result_path,
-        'metrics': metrics,
-    }
+    return _scan_to_dict(scan)
 
 
 @router.get('/scans/{case_id}/result/metrics')
@@ -78,12 +77,34 @@ async def result_metrics(case_id: str, db: Session = Depends(get_db)):
 
 @router.get('/scans')
 async def get_scans(db: Session = Depends(get_db)):
-    scans = db.query(Scan).all()
-    return [{
-        'case_id': scan.case_id,
-        'title': scan.title,
-        'status': scan.status,
-    } for scan in scans]
+    scans = db.query(Scan).order_by(Scan.created_at.desc()).all()
+    return [_scan_to_dict(scan) for scan in scans]
+
+
+@router.get('/scans/events')
+async def scan_events():
+    async def event_stream():
+        last_payload = None
+        while True:
+            with SessionLocal() as db:
+                scans = db.query(Scan).order_by(Scan.created_at.desc()).all()
+                payload = json.dumps([_scan_to_dict(scan) for scan in scans])
+
+            if payload != last_payload:
+                yield f'event: scans\ndata: {payload}\n\n'
+                last_payload = payload
+
+            await asyncio.sleep(2)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no',
+        },
+    )
 
 
 @router.get('/scans/{case_id}/result/images')
@@ -122,7 +143,7 @@ async def result_images(
 
     buf = get_slice_plot(prediction, slice_idx, background_slice, overlay_modality)
     buf.seek(0)
-    return StreamingResponse(buf, media_type="image/png")
+    return StreamingResponse(buf, media_type='image/png')
 
 
 @router.delete('/scans/{case_id}')
@@ -151,5 +172,5 @@ async def patch_scan(
 def _get_scan(db: Session, case_id: str) -> type[Scan]:
     scan = db.query(Scan).filter(Scan.case_id == case_id).first()
     if not scan:
-        raise HTTPException(status_code=404, detail="scan not found")
+        raise HTTPException(status_code=404, detail='scan not found')
     return scan

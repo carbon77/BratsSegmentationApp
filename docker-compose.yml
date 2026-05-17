@@ -13,6 +13,29 @@ services:
       timeout: 5s
       retries: 5
 
+  kafka:
+    image: bitnami/kafka:3.7
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
   backend:
     build:
       context: ./backend
@@ -21,6 +44,7 @@ services:
     env_file: "./backend/.env"
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/brats
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     #   AWS_S3_BUCKET: ${AWS_S3_BUCKET:-brats}
     #   AWS_REGION: ${AWS_REGION:-ru-central1}
     #   AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-https://storage.yandexcloud.net}
@@ -28,6 +52,22 @@ services:
     #   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  segmentation-worker:
+    build:
+      context: ./backend
+    command: ["/app/.venv/bin/python", "-m", "app.worker"]
+    env_file: "./backend/.env"
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/brats
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   frontend:
@@ -51,3 +91,4 @@ services:
 
 volumes:
   postgres_data:
+  kafka_data:

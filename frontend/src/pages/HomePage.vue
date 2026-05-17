@@ -24,19 +24,16 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, onUnmounted, ref } from 'vue'
 import Message from 'primevue/message'
 import Splitter from 'primevue/splitter'
 import SplitterPanel from 'primevue/splitterpanel'
 
 import ScansList from '../components/home/ScansList.vue'
 import UploadPanel from '../components/home/UploadPanel.vue'
-import { deleteScan, fetchScans, uploadScan } from '../services/api'
+import { deleteScan, fetchScans, subscribeToScans, uploadScan } from '../services/api'
 
-const router = useRouter()
-
-const selectedFiles = ref({
+const emptySelectedFiles = () => ({
   t1: null,
   t1ce: null,
   t2: null,
@@ -44,12 +41,14 @@ const selectedFiles = ref({
   true_mask: null
 })
 
+const selectedFiles = ref(emptySelectedFiles())
 const scans = ref([])
 const isLoadingScans = ref(false)
 const isUploading = ref(false)
 const deletingCaseId = ref('')
 const uploadError = ref('')
 const pageError = ref('')
+let unsubscribeScans = null
 
 async function loadScans() {
   pageError.value = ''
@@ -68,9 +67,9 @@ async function submitUpload() {
   isUploading.value = true
 
   try {
-    const payload = await uploadScan(selectedFiles.value)
-    await loadScans()
-    await router.push(`/scans/${payload.case_id}`)
+    const createdScan = await uploadScan(selectedFiles.value)
+    scans.value = [createdScan, ...scans.value.filter((scan) => scan.case_id !== createdScan.case_id)]
+    selectedFiles.value = emptySelectedFiles()
   } catch {
     uploadError.value = 'Upload failed. Verify file names include modality keywords.'
   } finally {
@@ -91,5 +90,17 @@ async function handleDeleteScan(caseId) {
   }
 }
 
-onMounted(loadScans)
+onMounted(() => {
+  loadScans()
+  unsubscribeScans = subscribeToScans((nextScans) => {
+    scans.value = nextScans
+    pageError.value = ''
+  }, () => {
+    pageError.value = 'Realtime scan updates are disconnected. The list may be stale.'
+  })
+})
+
+onUnmounted(() => {
+  unsubscribeScans?.()
+})
 </script>
