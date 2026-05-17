@@ -102,7 +102,7 @@ def get_slice_plot(
             vmin=0,
             vmax=max(CLASS_LABELS),
             cmap=SEGMENTATION_CMAP,
-            alpha=0.55,
+            alpha=0.65,
         )
         fig.colorbar(im, ax=ax, ticks=list(CLASS_LABELS.keys()))
         title = f'Segmentation on {modality.upper()} - slice {slice_idx}'

@@ -3,7 +3,8 @@ import axios from 'axios'
 const api = axios.create({
   headers: {
     Accept: 'application/json'
-  }
+  },
+  baseURL: '/api'
 })
 
 export async function fetchScans() {
