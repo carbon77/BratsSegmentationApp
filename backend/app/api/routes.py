@@ -10,8 +10,8 @@ from app.db.models import Scan
 from app.dto.dto import PatchScanRequest
 from app.services.preprocessing import preprocess_modality_slice
 from app.services.results import get_slice_plot
-from app.services.storage import save_uploaded_files_async, local_paths_for_case, load_result, \
-    delete_scan_files, uploaded_file_uri
+from app.services.storage import stage_uploaded_files, local_paths_for_case, load_result, \
+    delete_scan_files, delete_staged_files, uploaded_file_uri
 from app.services.tasks import enqueue_segmentation_task
 
 router = APIRouter()
@@ -45,21 +45,22 @@ async def predict(
     if true_mask is not None:
         files['true_mask'] = true_mask
 
-    print('Uploading files...')
-    case_id, upload_prefix, s3_paths = save_uploaded_files_async(files)
-    print('Files uploaded!')
+    print('Staging uploaded files...')
+    case_id, upload_prefix, staged_files = await stage_uploaded_files(files)
+    print('Files staged!')
 
-    scan = Scan(case_id=case_id, title=case_id, upload_prefix=upload_prefix, status='processing')
+    scan = Scan(case_id=case_id, title=case_id, upload_prefix=upload_prefix, status='uploading')
     db.add(scan)
     db.commit()
 
     try:
-        await enqueue_segmentation_task(case_id, s3_paths)
+        await enqueue_segmentation_task(case_id, upload_prefix, staged_files)
     except Exception as exc:
+        delete_staged_files(case_id)
         scan.status = 'failed'
         db.add(scan)
         db.commit()
-        raise HTTPException(status_code=503, detail='Could not enqueue segmentation task') from exc
+        raise HTTPException(status_code=503, detail='Could not enqueue upload task') from exc
 
     return _scan_to_dict(scan)
 

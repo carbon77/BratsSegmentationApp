@@ -82,6 +82,7 @@ const props = defineProps({
 defineEmits(['delete'])
 
 const statusLabels = {
+  uploading: 'Uploading',
   processing: 'Processing',
   completed: 'Completed',
   failed: 'Failed',
@@ -89,6 +90,7 @@ const statusLabels = {
 }
 
 const statusSeverities = {
+  uploading: 'info',
   processing: 'warn',
   completed: 'success',
   failed: 'danger',
@@ -106,7 +108,8 @@ function statusSeverity(status) {
 }
 
 function actionUnavailableLabel(status) {
-  return status === 'failed' ? 'Failed' : 'Processing'
+  if (status === 'failed') return 'Failed'
+  return status === 'uploading' ? 'Uploading' : 'Processing'
 }
 
 const filteredScans = computed(() => {

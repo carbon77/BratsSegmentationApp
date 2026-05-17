@@ -26,14 +26,15 @@ async def stop_task_producer() -> None:
         _producer = None
 
 
-async def enqueue_segmentation_task(case_id: str, s3_paths: dict[str, str]) -> None:
+async def enqueue_segmentation_task(case_id: str, upload_prefix: str, staged_files: dict[str, str]) -> None:
     if _producer is None:
         await start_task_producer()
     await _producer.send_and_wait(
         SEGMENTATION_TOPIC,
         {
             'case_id': case_id,
-            's3_paths': s3_paths,
+            'upload_prefix': upload_prefix,
+            'staged_files': staged_files,
         },
         key=case_id.encode('utf-8'),
     )
