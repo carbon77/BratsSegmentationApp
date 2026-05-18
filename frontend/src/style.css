@@ -157,3 +157,29 @@ body {
     min-height: 780px;
   }
 }
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.auth-page {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 7rem);
+}
+
+.auth-card {
+  width: min(100%, 440px);
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-form .p-password,
+.auth-form .p-password-input {
+  width: 100%;
+}
