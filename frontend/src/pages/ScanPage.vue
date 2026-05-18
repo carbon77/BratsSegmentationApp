@@ -3,11 +3,11 @@
     <Panel>
       <template #header>
         <div class="scan-header">
-          <Tag :value="title || `Scan ${caseId}`" severity="info" />
+          <Tag :value="title || t('scanFallback', { caseId })" severity="info" />
           <div class="title-editor">
-            <InputText v-model="editedTitle" placeholder="Scan title" />
+            <InputText v-model="editedTitle" :placeholder="t('scanTitlePlaceholder')" />
             <Button
-              label="Save title"
+              :label="t('saveTitle')"
               icon="pi pi-check"
               size="small"
               :disabled="!editedTitle.trim() || editedTitle === title"
@@ -16,7 +16,7 @@
             />
           </div>
           <Button
-            label="Delete scan"
+            :label="t('deleteScan')"
             icon="pi pi-trash"
             severity="danger"
             outlined
@@ -52,6 +52,7 @@ import Tag from 'primevue/tag'
 import MetricsTable from '../components/scan/MetricsTable.vue'
 import SliceViewer from '../components/scan/SliceViewer.vue'
 import { deleteScan, fetchMetrics, fetchScans, patchScanTitle } from '../services/api'
+import { usePreferences } from '../services/preferences'
 
 const props = defineProps({
   caseId: {
@@ -68,12 +69,13 @@ const isLoading = ref(false)
 const isDeleting = ref(false)
 const isSavingTitle = ref(false)
 const errorMessage = ref('')
+const { t } = usePreferences()
 
 async function loadTitle() {
   try {
     const scans = await fetchScans()
     const currentScan = scans.find((scan) => scan.case_id === props.caseId)
-    title.value = currentScan?.title || props.caseId
+    title.value = currentScan?.title || t('scanFallback', { caseId: props.caseId })
     editedTitle.value = title.value
   } catch {
     title.value = props.caseId
@@ -89,7 +91,7 @@ async function loadMetrics() {
     const payload = await fetchMetrics(props.caseId)
     metrics.value = payload.metrics ?? {}
   } catch {
-    errorMessage.value = 'Could not load scan metrics. It may still be processing.'
+    errorMessage.value = t('metricsLoadFailed')
   } finally {
     isLoading.value = false
   }
@@ -105,7 +107,7 @@ async function saveTitle() {
     await patchScanTitle(props.caseId, nextTitle)
     title.value = nextTitle
   } catch {
-    errorMessage.value = 'Could not update scan title.'
+    errorMessage.value = t('titleUpdateFailed')
   } finally {
     isSavingTitle.value = false
   }
@@ -119,7 +121,7 @@ async function removeScan() {
     await deleteScan(props.caseId)
     await router.push('/')
   } catch {
-    errorMessage.value = 'Could not delete this scan.'
+    errorMessage.value = t('currentScanDeleteFailed')
   } finally {
     isDeleting.value = false
   }

@@ -1,28 +1,28 @@
 <template>
   <section class="auth-page">
     <Card class="auth-card">
-      <template #title>Create account</template>
-      <template #subtitle>Register to keep scans private and tied to your profile.</template>
+      <template #title>{{ t('createAccount') }}</template>
+      <template #subtitle>{{ t('registerSubtitle') }}</template>
       <template #content>
         <form class="auth-form" @submit.prevent="submitRegister">
           <label class="field-block">
-            <span>Name</span>
+            <span>{{ t('name') }}</span>
             <InputText v-model="name" autocomplete="name" required />
           </label>
           <label class="field-block">
-            <span>Email</span>
+            <span>{{ t('email') }}</span>
             <InputText v-model="email" type="email" autocomplete="email" required />
           </label>
           <label class="field-block">
-            <span>Password</span>
+            <span>{{ t('password') }}</span>
             <Password v-model="password" toggleMask autocomplete="new-password" required />
           </label>
           <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
-          <Button label="Create account" icon="pi pi-user-plus" type="submit" :loading="isSubmitting" />
+          <Button :label="t('createAccount')" icon="pi pi-user-plus" type="submit" :loading="isSubmitting" />
         </form>
       </template>
       <template #footer>
-        <RouterLink to="/login">Already have an account? Login</RouterLink>
+        <RouterLink to="/login">{{ t('alreadyHaveAccount') }}</RouterLink>
       </template>
     </Card>
   </section>
@@ -38,6 +38,7 @@ import Message from 'primevue/message'
 import Password from 'primevue/password'
 
 import { registerAccount } from '../services/api'
+import { usePreferences } from '../services/preferences'
 
 const router = useRouter()
 const name = ref('')
@@ -45,6 +46,7 @@ const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
 const isSubmitting = ref(false)
+const { t } = usePreferences()
 
 async function submitRegister() {
   errorMessage.value = ''
@@ -54,7 +56,7 @@ async function submitRegister() {
     await registerAccount({ name: name.value, email: email.value, password: password.value })
     await router.push('/')
   } catch {
-    errorMessage.value = 'Could not create account. The email may already be registered.'
+    errorMessage.value = t('registerFailed')
   } finally {
     isSubmitting.value = false
   }

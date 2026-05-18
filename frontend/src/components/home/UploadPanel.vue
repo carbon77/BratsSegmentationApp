@@ -1,9 +1,9 @@
 <template>
-  <Panel header="Upload MRI modalities" toggleable>
+  <Panel :header="t('uploadPanelTitle')" toggleable>
     <div class="upload-panel-content">
-      <Fieldset legend="Automatic assignment" class="section-block">
-        <p class="section-caption">Select 4 files in one action; filenames are mapped by keywords: t1, t1ce, t2, flair.</p>
-        <Button label="Choose 4 files" icon="pi pi-folder-open" @click="openAllPicker" />
+      <Fieldset :legend="t('automaticAssignment')" class="section-block">
+        <p class="section-caption">{{ t('automaticAssignmentCaption') }}</p>
+        <Button :label="t('chooseFourFiles')" icon="pi pi-folder-open" @click="openAllPicker" />
         <input
           ref="allInputRef"
           class="hidden-input"
@@ -14,7 +14,7 @@
         />
       </Fieldset>
 
-      <Fieldset legend="Required modalities" class="section-block">
+      <Fieldset :legend="t('requiredModalities')" class="section-block">
         <div class="modality-grid">
           <div v-for="modality in modalities" :key="modality" class="modality-row">
             <div>
@@ -22,9 +22,9 @@
               <small class="modality-name">{{ selectedName(modality) }}</small>
             </div>
             <div class="row-actions">
-              <Tag :value="modelValue[modality] ? 'Selected' : 'Missing'" :severity="modelValue[modality] ? 'success' : 'warning'" />
+              <Tag :value="modelValue[modality] ? t('selected') : t('missing')" :severity="modelValue[modality] ? 'success' : 'warning'" />
               <Button
-                :label="modelValue[modality] ? 'Replace' : 'Choose'"
+                :label="modelValue[modality] ? t('replace') : t('choose')"
                 icon="pi pi-upload"
                 outlined
                 @click="openPicker(modality)"
@@ -41,16 +41,16 @@
         </div>
       </Fieldset>
 
-      <Fieldset legend="Optional true mask" class="section-block">
+      <Fieldset :legend="t('optionalTrueMask')" class="section-block">
         <div class="modality-row">
           <div>
             <div class="modality-label">TRUE_MASK</div>
             <small class="modality-name">{{ selectedName('true_mask') }}</small>
           </div>
           <div class="row-actions">
-            <Tag :value="modelValue.true_mask ? 'Selected' : 'Optional'" :severity="modelValue.true_mask ? 'success' : 'info'" />
+            <Tag :value="modelValue.true_mask ? t('selected') : t('optional')" :severity="modelValue.true_mask ? 'success' : 'info'" />
             <Button
-              :label="modelValue.true_mask ? 'Replace' : 'Choose'"
+              :label="modelValue.true_mask ? t('replace') : t('choose')"
               icon="pi pi-upload"
               outlined
               @click="openPicker('true_mask')"
@@ -68,13 +68,13 @@
 
       <div class="submit-row">
         <Button
-          label="Create scan"
+          :label="t('createScan')"
           icon="pi pi-cloud-upload"
           :loading="isUploading"
           :disabled="!allModalitiesSelected || isUploading"
           @click="$emit('submit')"
         />
-        <small>All 4 modalities are required for upload.</small>
+        <small>{{ t('allModalitiesRequired') }}</small>
       </div>
 
       <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
@@ -89,6 +89,8 @@ import Fieldset from 'primevue/fieldset'
 import Message from 'primevue/message'
 import Panel from 'primevue/panel'
 import Tag from 'primevue/tag'
+
+import { usePreferences } from '../../services/preferences'
 
 const props = defineProps({
   modelValue: {
@@ -110,6 +112,7 @@ const emit = defineEmits(['update:modelValue', 'submit'])
 const modalities = ['t1', 't1ce', 't2', 'flair']
 const inputRefs = reactive({})
 const allInputRef = ref(null)
+const { t } = usePreferences()
 
 const allModalitiesSelected = computed(() => modalities.every((m) => Boolean(props.modelValue[m])))
 
@@ -159,6 +162,6 @@ function onAllFilesSelected(event) {
 }
 
 function selectedName(modality) {
-  return props.modelValue[modality]?.name ?? 'No file selected'
+  return props.modelValue[modality]?.name ?? t('noFileSelected')
 }
 </script>

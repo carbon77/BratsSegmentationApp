@@ -32,6 +32,7 @@ import SplitterPanel from 'primevue/splitterpanel'
 import ScansList from '../components/home/ScansList.vue'
 import UploadPanel from '../components/home/UploadPanel.vue'
 import { deleteScan, fetchScans, subscribeToScans, uploadScan } from '../services/api'
+import { usePreferences } from '../services/preferences'
 
 const emptySelectedFiles = () => ({
   t1: null,
@@ -49,6 +50,7 @@ const deletingCaseId = ref('')
 const uploadError = ref('')
 const pageError = ref('')
 let unsubscribeScans = null
+const { t } = usePreferences()
 
 async function loadScans() {
   pageError.value = ''
@@ -56,7 +58,7 @@ async function loadScans() {
   try {
     scans.value = await fetchScans()
   } catch {
-    pageError.value = 'Could not load scans. Check backend availability.'
+    pageError.value = t('loadScansError')
   } finally {
     isLoadingScans.value = false
   }
@@ -71,7 +73,7 @@ async function submitUpload() {
     scans.value = [createdScan, ...scans.value.filter((scan) => scan.case_id !== createdScan.case_id)]
     selectedFiles.value = emptySelectedFiles()
   } catch {
-    uploadError.value = 'Upload failed. Verify file names include modality keywords.'
+    uploadError.value = t('uploadFailed')
   } finally {
     isUploading.value = false
   }
@@ -84,7 +86,7 @@ async function handleDeleteScan(caseId) {
     await deleteScan(caseId)
     scans.value = scans.value.filter((scan) => scan.case_id !== caseId)
   } catch {
-    pageError.value = `Could not delete scan ${caseId}.`
+    pageError.value = t('deleteScanFailed', { caseId })
   } finally {
     deletingCaseId.value = ''
   }
@@ -96,7 +98,7 @@ onMounted(() => {
     scans.value = nextScans
     pageError.value = ''
   }, () => {
-    pageError.value = 'Realtime scan updates are disconnected. The list may be stale.'
+    pageError.value = t('realtimeDisconnected')
   })
 })
 

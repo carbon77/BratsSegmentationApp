@@ -1,29 +1,29 @@
 <template>
-  <Panel header="Segmentation slice">
+  <Panel :header="t('segmentationSlice')">
     <div class="slice-controls">
       <div class="field-block">
-        <label for="sliceIdx">Slice index</label>
+        <label for="sliceIdx">{{ t('sliceIndex') }}</label>
         <InputNumber v-model="localSliceIdx" :min="0" :max="maxSliceIdx" inputId="sliceIdx" />
       </div>
       <div class="field-block field-block--wide">
-        <label for="sliceSlider">Quick adjust</label>
+        <label for="sliceSlider">{{ t('quickAdjust') }}</label>
         <Slider id="sliceSlider" v-model="localSliceIdx" :min="0" :max="maxSliceIdx" />
       </div>
       <div class="field-block field-block--wide">
-        <label for="overlayModality">MRI scan cover</label>
+        <label for="overlayModality">{{ t('overlay') }}</label>
         <Dropdown
           id="overlayModality"
           v-model="overlayModality"
           :options="overlayOptions"
           optionLabel="label"
           optionValue="value"
-          placeholder="Mask only"
+          :placeholder="t('overlayMaskOnly')"
         />
       </div>
       <div class="button-row">
-        <Button label="Load image" icon="pi pi-image" :loading="isLoading" @click="loadImage" />
+        <Button :label="t('loadSlice')" icon="pi pi-image" :loading="isLoading" @click="loadImage" />
         <Button
-          label="Download image"
+          :label="t('downloadPng')"
           icon="pi pi-download"
           severity="secondary"
           :loading="isDownloading"
@@ -39,7 +39,7 @@
     <div v-if="imageSrc" class="image-wrapper">
       <Image :src="imageSrc" :alt="imageAlt" preview imageClass="slice-image" />
     </div>
-    <Message v-else severity="warn">Load a slice image to preview segmentation mask.</Message>
+    <Message v-else severity="warn">{{ t('loadSlicePrompt') }}</Message>
   </Panel>
 </template>
 
@@ -54,6 +54,7 @@ import Panel from 'primevue/panel'
 import Slider from 'primevue/slider'
 
 import { downloadSlice } from '../../services/api'
+import { usePreferences } from '../../services/preferences'
 
 const props = defineProps({
   caseId: {
@@ -66,14 +67,14 @@ const props = defineProps({
   }
 })
 
+const { t } = usePreferences()
 const maxSliceIdx = 95
-const overlayOptions = [
-  { label: 'Do not cover (mask only)', value: null },
-  { label: 'Cover T1 scan', value: 't1' },
-  { label: 'Cover T1CE scan', value: 't1ce' },
-  { label: 'Cover T2 scan', value: 't2' },
-  { label: 'Cover FLAIR scan', value: 'flair' }
-]
+const overlayValues = [null, 't1', 't1ce', 't2', 'flair']
+
+const overlayOptions = computed(() => overlayValues.map((value) => ({
+  label: value ? `${t('overlay')} ${value.toUpperCase()}` : t('overlayMaskOnly'),
+  value
+})))
 
 const localSliceIdx = ref(props.initialSlice)
 const overlayModality = ref(null)
@@ -83,8 +84,8 @@ const isDownloading = ref(false)
 const errorMessage = ref('')
 
 const imageAlt = computed(() => {
-  if (!overlayModality.value) return 'Segmentation mask slice'
-  return `Segmentation mask slice covered with ${overlayModality.value.toUpperCase()} MRI scan`
+  if (!overlayModality.value) return t('maskSliceAlt')
+  return t('overlaySliceAlt', { modality: overlayModality.value.toUpperCase() })
 })
 
 function clearObjectUrl() {
@@ -105,7 +106,7 @@ async function loadImage() {
     imageSrc.value = URL.createObjectURL(blob)
   } catch {
     clearObjectUrl()
-    errorMessage.value = 'Unable to load slice image.'
+    errorMessage.value = t('sliceLoadFailed')
   } finally {
     isLoading.value = false
   }

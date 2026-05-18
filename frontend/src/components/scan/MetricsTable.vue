@@ -1,15 +1,15 @@
 <template>
-  <Panel header="Metrics">
+  <Panel :header="t('metrics')">
     <Accordion v-if="rows.length" :activeIndex="0" class="metrics-accordion">
       <AccordionTab v-for="section in sectionedRows" :key="section.group" :header="section.group.toUpperCase()">
         <DataTable :value="section.items" size="small" responsiveLayout="scroll">
-          <Column field="metric" header="Metric" />
-          <Column field="value" header="Value" />
+          <Column field="metric" :header="t('metric')" />
+          <Column field="value" :header="t('value')" />
         </DataTable>
       </AccordionTab>
     </Accordion>
 
-    <Message v-else severity="info">No metrics available.</Message>
+    <Message v-else severity="info">{{ t('noMetrics') }}</Message>
   </Panel>
 </template>
 
@@ -21,6 +21,10 @@ import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Message from 'primevue/message'
 import Panel from 'primevue/panel'
+
+import { usePreferences } from '../../services/preferences'
+
+const { t } = usePreferences()
 
 const props = defineProps({
   metrics: {
