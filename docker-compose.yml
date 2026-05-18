@@ -44,35 +44,17 @@ services:
       context: ./backend
     ports:
       - 8000:8000
-    env_file: "./backend/.env"
     environment:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/brats
+      DATABASE_URL: jdbc:postgresql://postgres:5432/brats
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       UPLOAD_STAGING_DIR: /app/upload-staging
-    #   AWS_S3_BUCKET: ${AWS_S3_BUCKET:-brats}
-    #   AWS_REGION: ${AWS_REGION:-ru-central1}
-    #   AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-https://storage.yandexcloud.net}
-    #   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-    #   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      ONNX_MODEL_PATH: /app/model.onnx
     volumes:
       - upload_staging:/app/upload-staging
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-
-  segmentation-worker:
-    build:
-      context: ./backend
-    command: ["/app/.venv/bin/python", "-m", "app.worker"]
-    env_file: "./backend/.env"
-    environment:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/brats
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      UPLOAD_STAGING_DIR: /app/upload-staging
-    volumes:
-      - upload_staging:/app/upload-staging
+      # Generate backend/model.onnx with backend/scripts/convert_model_to_onnx.py before enabling this mount.
+      # - ./backend/model.onnx:/app/model.onnx:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,7 +68,7 @@ services:
       - "4173:4173"
     depends_on:
       - backend
-  
+
   nginx:
     image: nginx:1.27-alpine
     container_name: brats-nginx

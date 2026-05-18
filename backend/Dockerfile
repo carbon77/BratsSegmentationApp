@@ -1,19 +1,13 @@
-FROM python:3.13-slim
-
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libxcb1 \
-    libgl1 \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY . /app
-
-ENV UV_NO_DEV=1
-
+FROM maven:3.9.10-eclipse-temurin-21 AS build
 WORKDIR /app
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+COPY src ./src
+RUN mvn -B package -DskipTests
 
-RUN uv sync
-
-CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--port", "8000", "--host", "0.0.0.0"]
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+RUN mkdir -p /app/upload-staging
+COPY --from=build /app/target/brats-segmentation-backend-0.0.1-SNAPSHOT.jar /app/app.jar
+EXPOSE 8000
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

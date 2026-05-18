@@ -1,0 +1,42 @@
+server:
+  port: ${PORT:8000}
+
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/brats}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 2GB
+      max-request-size: 8GB
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${SEGMENTATION_CONSUMER_GROUP:segmentation-workers}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.example.brats.dto
+    listener:
+      ack-mode: manual
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+brats:
+  model-path: ${ONNX_MODEL_PATH:/app/model.onnx}
+  upload-staging-dir: ${UPLOAD_STAGING_DIR:/tmp/brats-upload-staging}
+  segmentation-topic: ${SEGMENTATION_TOPIC:segmentation-tasks}
+  s3:
+    bucket: ${AWS_S3_BUCKET:brats}
+    region: ${AWS_REGION:ru-central1}
+    endpoint-url: ${AWS_S3_ENDPOINT_URL:https://storage.yandexcloud.net}
+    access-key: ${AWS_S3_ACCESS_KEY:${AWS_ACCESS_KEY_ID:}}
+    secret-key: ${AWS_S3_SECRET_KEY:${AWS_SECRET_ACCESS_KEY:}}
