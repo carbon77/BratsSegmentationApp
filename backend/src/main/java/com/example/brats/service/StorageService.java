@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,17 +30,13 @@ import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
+@RequiredArgsConstructor
 public class StorageService {
     private static final Logger log = LoggerFactory.getLogger(StorageService.class);
     private static final int RESULT_MAGIC = 0x42524154;
 
     private final BratsProperties properties;
     private final S3Client s3;
-
-    public StorageService(BratsProperties properties, S3Client s3) {
-        this.properties = properties;
-        this.s3 = s3;
-    }
 
     public StagedUpload stageUploadedFiles(Map<String, MultipartFile> files) throws IOException {
         String caseId = UUID.randomUUID().toString();

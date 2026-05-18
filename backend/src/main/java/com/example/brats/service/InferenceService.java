@@ -4,6 +4,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import ai.onnxruntime.OrtException;
 import ai.onnxruntime.OrtSession;
 
 @Service
+@RequiredArgsConstructor
 public class InferenceService implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(InferenceService.class);
 
@@ -23,10 +26,6 @@ public class InferenceService implements AutoCloseable {
     private OrtEnvironment environment;
     private OrtSession session;
     private String inputName;
-
-    public InferenceService(BratsProperties properties) {
-        this.properties = properties;
-    }
 
     public synchronized Volume runInference(float[][][][][] tensor) throws OrtException {
         ensureSession();

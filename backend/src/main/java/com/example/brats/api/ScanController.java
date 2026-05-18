@@ -6,6 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +41,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
+@RequiredArgsConstructor
 public class ScanController {
     private final ScanRepository scanRepository;
     private final StorageService storageService;
@@ -47,23 +50,6 @@ public class ScanController {
     private final KafkaTemplate<String, SegmentationTask> kafkaTemplate;
     private final BratsProperties properties;
     private final ObjectMapper objectMapper;
-
-    public ScanController(
-            ScanRepository scanRepository,
-            StorageService storageService,
-            PreprocessingService preprocessingService,
-            ResultsService resultsService,
-            KafkaTemplate<String, SegmentationTask> kafkaTemplate,
-            BratsProperties properties,
-            ObjectMapper objectMapper) {
-        this.scanRepository = scanRepository;
-        this.storageService = storageService;
-        this.preprocessingService = preprocessingService;
-        this.resultsService = resultsService;
-        this.kafkaTemplate = kafkaTemplate;
-        this.properties = properties;
-        this.objectMapper = objectMapper;
-    }
 
     @PostMapping(path = "/predict", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional

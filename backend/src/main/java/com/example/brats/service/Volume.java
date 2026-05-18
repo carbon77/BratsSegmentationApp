@@ -1,5 +1,8 @@
 package com.example.brats.service;
 
+import lombok.Getter;
+
+@Getter
 public class Volume {
     private final int depth;
     private final int height;

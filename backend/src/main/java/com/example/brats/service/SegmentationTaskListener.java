@@ -1,5 +1,7 @@
 package com.example.brats.service;
 
+import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -13,6 +15,7 @@ import com.example.brats.repository.ScanRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
+@RequiredArgsConstructor
 public class SegmentationTaskListener {
     private static final Logger log = LoggerFactory.getLogger(SegmentationTaskListener.class);
 
@@ -20,17 +23,6 @@ public class SegmentationTaskListener {
     private final SegmentationService segmentationService;
     private final ScanRepository scanRepository;
     private final ObjectMapper objectMapper;
-
-    public SegmentationTaskListener(
-            StorageService storageService,
-            SegmentationService segmentationService,
-            ScanRepository scanRepository,
-            ObjectMapper objectMapper) {
-        this.storageService = storageService;
-        this.segmentationService = segmentationService;
-        this.scanRepository = scanRepository;
-        this.objectMapper = objectMapper;
-    }
 
     @KafkaListener(topics = "${brats.segmentation-topic}")
     @Transactional

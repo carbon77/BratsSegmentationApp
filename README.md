@@ -7,7 +7,8 @@ App where users upload BraTS MRI NIfTI modalities and receive segmentation masks
 ## Stack
 
 - Frontend: Vue + Vite
-- Backend: Java 21, Spring Boot, Spring MVC, Spring Data JPA, Spring Kafka
+- Backend API/orchestration: Java 21, Spring Boot, Spring MVC, Spring Data JPA, Spring Kafka, Lombok
+- NIfTI preprocessing: Python service with FastAPI, nibabel, numpy, and OpenCV
 - Inference: ONNX Runtime for Java
 - Persistence: PostgreSQL
 - Object storage: S3-compatible storage such as Yandex Cloud Object Storage
@@ -23,6 +24,16 @@ python scripts/convert_model_to_onnx.py --checkpoint model.pth --output model.on
 ```
 
 The converter exports a `[1, 4, 96, 128, 128]` input tensor model and verifies it with ONNX Runtime by default. Set `ONNX_MODEL_PATH` if the model is stored somewhere other than `/app/model.onnx`.
+
+## NIfTI service
+
+NIfTI file loading, resizing, normalization, true-mask preprocessing, and overlay-slice extraction remain in Python. The Java backend calls the service through `NIFTI_SERVICE_URL` and then performs ONNX inference and persistence itself.
+
+```bash
+cd backend/nifti-service
+uv sync
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8010
+```
 
 ## Backend API
 
@@ -42,6 +53,7 @@ The converter exports a `[1, 4, 96, 128, 128]` input tensor model and verifies i
 - `KAFKA_BOOTSTRAP_SERVERS` (optional, defaults to `localhost:9092`)
 - `SEGMENTATION_TOPIC` (optional, defaults to `segmentation-tasks`)
 - `ONNX_MODEL_PATH` (optional, defaults to `/app/model.onnx`)
+- `NIFTI_SERVICE_URL` (optional, defaults to `http://localhost:8010`)
 - `AWS_S3_BUCKET` (optional, defaults to `brats`)
 - `AWS_REGION` (optional, defaults to `ru-central1`)
 - `AWS_S3_ENDPOINT_URL` (optional, defaults to `https://storage.yandexcloud.net`)

@@ -4,25 +4,17 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class SegmentationService {
     private final StorageService storageService;
     private final PreprocessingService preprocessingService;
     private final InferenceService inferenceService;
     private final ResultsService resultsService;
-
-    public SegmentationService(
-            StorageService storageService,
-            PreprocessingService preprocessingService,
-            InferenceService inferenceService,
-            ResultsService resultsService) {
-        this.storageService = storageService;
-        this.preprocessingService = preprocessingService;
-        this.inferenceService = inferenceService;
-        this.resultsService = resultsService;
-    }
 
     public SegmentationResult process(String caseId, Map<String, String> s3Paths) throws Exception {
         Map<String, Path> localPaths = storageService.downloadFiles(s3Paths);

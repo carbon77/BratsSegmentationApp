@@ -51,6 +51,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       UPLOAD_STAGING_DIR: /app/upload-staging
       ONNX_MODEL_PATH: /app/model.onnx
+      NIFTI_SERVICE_URL: http://nifti-service:8010
     volumes:
       - upload_staging:/app/upload-staging
       # Generate backend/model.onnx with backend/scripts/convert_model_to_onnx.py before enabling this mount.
@@ -60,6 +61,14 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      nifti-service:
+        condition: service_started
+
+  nifti-service:
+    build:
+      context: ./backend/nifti-service
+    ports:
+      - "8010:8010"
 
   frontend:
     build:

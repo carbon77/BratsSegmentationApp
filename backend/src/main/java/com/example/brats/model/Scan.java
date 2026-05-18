@@ -11,7 +11,11 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "scans", indexes = @Index(name = "idx_scans_case_id", columnList = "case_id", unique = true))
 public class Scan {
@@ -54,20 +58,4 @@ public class Scan {
     void preUpdate() {
         updatedAt = OffsetDateTime.now();
     }
-
-    public Integer getId() { return id; }
-    public String getCaseId() { return caseId; }
-    public void setCaseId(String caseId) { this.caseId = caseId; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getUploadPrefix() { return uploadPrefix; }
-    public void setUploadPrefix(String uploadPrefix) { this.uploadPrefix = uploadPrefix; }
-    public String getResultPath() { return resultPath; }
-    public void setResultPath(String resultPath) { this.resultPath = resultPath; }
-    public String getMetrics() { return metrics; }
-    public void setMetrics(String metrics) { this.metrics = metrics; }
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

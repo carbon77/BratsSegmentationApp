@@ -34,6 +34,7 @@ brats:
   model-path: ${ONNX_MODEL_PATH:/app/model.onnx}
   upload-staging-dir: ${UPLOAD_STAGING_DIR:/tmp/brats-upload-staging}
   segmentation-topic: ${SEGMENTATION_TOPIC:segmentation-tasks}
+  nifti-service-url: ${NIFTI_SERVICE_URL:http://localhost:8010}
   s3:
     bucket: ${AWS_S3_BUCKET:brats}
     region: ${AWS_REGION:ru-central1}
