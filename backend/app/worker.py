@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 from app.db.database import SessionLocal, engine
 from app.db.models import Base, Scan
+from app.services.inference import preload_model
 from app.services.schema import ensure_schema
 from app.services.segmentation import process_segmentation
 from app.services.storage import delete_staged_files, upload_staged_files
@@ -66,6 +67,7 @@ async def _handle_message(payload: dict) -> None:
 async def main() -> None:
     Base.metadata.create_all(bind=engine)
     ensure_schema(engine)
+    preload_model()
     consumer = AIOKafkaConsumer(
         SEGMENTATION_TOPIC,
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
