@@ -12,6 +12,7 @@ dependencies = [
     "nibabel>=5.4.2",
     "opencv-python-headless>=4.13.0.92",
     "psycopg[binary]>=3.3.3",
+    "pytest>=9.0.3",
     "python-dotenv>=1.2.2",
     "sqlalchemy>=2.0.48",
     "torch>=2.11.0",
