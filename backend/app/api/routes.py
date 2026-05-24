@@ -11,6 +11,7 @@ from app.dto.dto import AuthRequest, PatchScanRequest, RegisterRequest
 from app.services.auth import create_access_token, get_current_user, hash_password, verify_password
 from app.services.preprocessing import preprocess_modality_slice
 from app.services.results import get_slice_plot
+from app.services.orthanc import export_metrics_to_orthanc
 from app.services.storage import stage_uploaded_files, local_paths_for_case, load_result, \
     delete_scan_files, delete_staged_files, uploaded_file_uri
 from app.services.tasks import enqueue_segmentation_task
@@ -206,6 +207,20 @@ async def result_images(
     buf.seek(0)
     return StreamingResponse(buf, media_type='image/png')
 
+
+
+
+@router.post('/scans/{case_id}/result/export/orthanc')
+async def export_result_to_orthanc(
+        case_id: str,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+):
+    scan = _get_scan(db, case_id, current_user)
+    if scan.status != 'completed' or not scan.metrics:
+        raise HTTPException(status_code=400, detail='Scan results not ready')
+
+    return export_metrics_to_orthanc(case_id, scan.title, scan.metrics)
 
 @router.delete('/scans/{case_id}')
 async def delete_scan(

@@ -128,3 +128,8 @@ export function subscribeToScans(onScans, onError) {
 
   return () => eventSource.close()
 }
+
+export async function exportMetricsToOrthanc(caseId) {
+  const { data } = await api.post(`/scans/${caseId}/result/export/orthanc`)
+  return data
+}

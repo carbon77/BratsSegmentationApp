@@ -34,6 +34,19 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
 
+
+  orthanc:
+    image: orthancteam/orthanc:24.4.0
+    ports:
+      - "8042:8042"
+      - "4242:4242"
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "true"
+      ORTHANC__REGISTERED_USERS: '{"orthanc":"orthanc"}'
+      ORTHANC__REMOTE_ACCESS_ALLOWED: "true"
+    volumes:
+      - orthanc_data:/var/lib/orthanc/db
+
   backend:
     build:
       context: ./backend
@@ -44,6 +57,9 @@ services:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/brats
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       UPLOAD_STAGING_DIR: /app/upload-staging
+      ORTHANC_URL: http://orthanc:8042
+      ORTHANC_USERNAME: orthanc
+      ORTHANC_PASSWORD: orthanc
     #   AWS_S3_BUCKET: ${AWS_S3_BUCKET:-brats}
     #   AWS_REGION: ${AWS_REGION:-ru-central1}
     #   AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-https://storage.yandexcloud.net}
@@ -66,6 +82,9 @@ services:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/brats
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       UPLOAD_STAGING_DIR: /app/upload-staging
+      ORTHANC_URL: http://orthanc:8042
+      ORTHANC_USERNAME: orthanc
+      ORTHANC_PASSWORD: orthanc
     volumes:
       - upload_staging:/app/upload-staging
     depends_on:
@@ -97,3 +116,4 @@ volumes:
   postgres_data:
   kafka_data:
   upload_staging:
+  orthanc_data:

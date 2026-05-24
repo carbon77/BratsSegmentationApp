@@ -170,6 +170,7 @@ docker compose up --build
 - Web UI через Nginx: <http://localhost/>
 - Backend API напрямую: <http://localhost:8000/>
 - Frontend preview контейнер напрямую: <http://localhost:4173/>
+- Orthanc Web UI: <http://localhost:8042/> (логин/пароль: `orthanc` / `orthanc`)
 
 ### 3. Открыть приложение
 
@@ -282,3 +283,17 @@ cd backend && uv run python -m app.worker
 - Если статус `Failed`, проверьте доступность S3-compatible storage, корректность credentials и формат NIfTI-файлов.
 - Если список сканов не обновляется автоматически, проверьте endpoint `/api/scans/events` и Nginx buffering; конфигурация должна отключать буферизацию SSE.
 - Если PNG-срез не строится, убедитесь, что скан в статусе `completed`, а `slice_idx` находится внутри размеров загруженного объёма.
+
+## Экспорт метрик в Orthanc
+
+На странице скана доступны действия:
+
+- `Export JSON` / `Экспорт JSON` — локальная выгрузка метрик.
+- `Export CSV` / `Экспорт CSV` — локальная выгрузка метрик.
+- `Upload to Orthanc` / `Выгрузить в Orthanc` — отправляет оба файла (JSON и CSV) в Orthanc через backend как DICOM-инстансы с инкапсулированным содержимым.
+
+Backend использует переменные окружения:
+
+- `ORTHANC_URL` (по умолчанию `http://orthanc:8042`)
+- `ORTHANC_USERNAME` (по умолчанию `orthanc`)
+- `ORTHANC_PASSWORD` (по умолчанию `orthanc`)

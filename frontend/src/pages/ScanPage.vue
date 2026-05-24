@@ -18,6 +18,7 @@
           <div class="scan-actions">
             <Button :label="t('downloadJson')" icon="pi pi-download" outlined size="small" @click="downloadMetricsJson" />
             <Button :label="t('downloadCsv')" icon="pi pi-file" outlined size="small" @click="downloadMetricsCsv" />
+            <Button :label="t('uploadOrthanc')" icon="pi pi-upload" outlined size="small" :loading="isExportingOrthanc" @click="uploadToOrthanc" />
             <Button
               :label="t('deleteScan')"
               icon="pi pi-trash"
@@ -33,7 +34,7 @@
       <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
 
       <div v-else class="scan-content">
-        <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+        <Message v-if="feedbackMessage" :severity="feedbackSeverity">{{ feedbackMessage }}</Message>
         <MetricsTable :metrics="metrics" />
         <Divider />
         <SliceViewer :case-id="caseId" :initial-slice="60" />
@@ -55,7 +56,7 @@ import Tag from 'primevue/tag'
 
 import MetricsTable from '../components/scan/MetricsTable.vue'
 import SliceViewer from '../components/scan/SliceViewer.vue'
-import { deleteScan, fetchMetrics, fetchScans, patchScanTitle } from '../services/api'
+import { deleteScan, exportMetricsToOrthanc, fetchMetrics, fetchScans, patchScanTitle } from '../services/api'
 import { usePreferences } from '../services/preferences'
 
 const props = defineProps({
@@ -72,7 +73,9 @@ const editedTitle = ref('')
 const isLoading = ref(false)
 const isDeleting = ref(false)
 const isSavingTitle = ref(false)
-const errorMessage = ref('')
+const feedbackMessage = ref('')
+const feedbackSeverity = ref('error')
+const isExportingOrthanc = ref(false)
 const { t } = usePreferences()
 
 function downloadBlob(filename, content, mimeType) {
@@ -129,13 +132,14 @@ async function loadTitle() {
 
 async function loadMetrics() {
   isLoading.value = true
-  errorMessage.value = ''
+  feedbackMessage.value = ''
 
   try {
     const payload = await fetchMetrics(props.caseId)
     metrics.value = payload.metrics ?? {}
   } catch {
-    errorMessage.value = t('metricsLoadFailed')
+    feedbackSeverity.value = 'error'
+    feedbackMessage.value = t('metricsLoadFailed')
   } finally {
     isLoading.value = false
   }
@@ -146,26 +150,46 @@ async function saveTitle() {
   if (!nextTitle) return
 
   isSavingTitle.value = true
-  errorMessage.value = ''
+  feedbackMessage.value = ''
   try {
     await patchScanTitle(props.caseId, nextTitle)
     title.value = nextTitle
   } catch {
-    errorMessage.value = t('titleUpdateFailed')
+    feedbackSeverity.value = 'error'
+    feedbackMessage.value = t('titleUpdateFailed')
   } finally {
     isSavingTitle.value = false
   }
 }
 
+
+
+async function uploadToOrthanc() {
+  isExportingOrthanc.value = true
+  feedbackMessage.value = ''
+
+  try {
+    await exportMetricsToOrthanc(props.caseId)
+    feedbackSeverity.value = 'success'
+    feedbackMessage.value = t('orthancExportSuccess')
+  } catch {
+    feedbackSeverity.value = 'error'
+    feedbackMessage.value = t('orthancExportFailed')
+  } finally {
+    isExportingOrthanc.value = false
+  }
+}
+
 async function removeScan() {
   isDeleting.value = true
-  errorMessage.value = ''
+  feedbackMessage.value = ''
 
   try {
     await deleteScan(props.caseId)
     await router.push('/')
   } catch {
-    errorMessage.value = t('currentScanDeleteFailed')
+    feedbackSeverity.value = 'error'
+    feedbackMessage.value = t('currentScanDeleteFailed')
   } finally {
     isDeleting.value = false
   }
