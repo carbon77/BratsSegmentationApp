@@ -15,14 +15,18 @@
               @click="saveTitle"
             />
           </div>
-          <Button
-            :label="t('deleteScan')"
-            icon="pi pi-trash"
-            severity="danger"
-            outlined
-            :loading="isDeleting"
-            @click="removeScan"
-          />
+          <div class="scan-actions">
+            <Button :label="t('downloadJson')" icon="pi pi-download" outlined size="small" @click="downloadMetricsJson" />
+            <Button :label="t('downloadCsv')" icon="pi pi-file" outlined size="small" @click="downloadMetricsCsv" />
+            <Button
+              :label="t('deleteScan')"
+              icon="pi pi-trash"
+              severity="danger"
+              outlined
+              :loading="isDeleting"
+              @click="removeScan"
+            />
+          </div>
         </div>
       </template>
 
@@ -70,6 +74,46 @@ const isDeleting = ref(false)
 const isSavingTitle = ref(false)
 const errorMessage = ref('')
 const { t } = usePreferences()
+
+function downloadBlob(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
+function flattenMetrics(node, prefix = '', rows = []) {
+  if (node === null || node === undefined) {
+    rows.push([prefix, ''])
+    return rows
+  }
+
+  if (typeof node !== 'object') {
+    rows.push([prefix, node])
+    return rows
+  }
+
+  Object.entries(node).forEach(([key, value]) => {
+    const nextPrefix = prefix ? `${prefix}.${key}` : key
+    flattenMetrics(value, nextPrefix, rows)
+  })
+
+  return rows
+}
+
+function downloadMetricsJson() {
+  const filename = `${props.caseId}-metrics.json`
+  const payload = JSON.stringify({ case_id: props.caseId, metrics: metrics.value }, null, 2)
+  downloadBlob(filename, payload, 'application/json;charset=utf-8')
+}
+
+function downloadMetricsCsv() {
+  const rows = flattenMetrics(metrics.value)
+  const csv = ['metric,value', ...rows.map(([metric, value]) => `${metric},${JSON.stringify(value)}`)].join('\n')
+  downloadBlob(`${props.caseId}-metrics.csv`, csv, 'text/csv;charset=utf-8')
+}
 
 async function loadTitle() {
   try {
