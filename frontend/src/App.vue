@@ -39,6 +39,19 @@
     <main class="page-content">
       <RouterView />
     </main>
+
+    <Dialog
+      v-model:visible="showLogoutDialog"
+      modal
+      :header="t('logoutConfirmTitle')"
+      :style="{ width: '28rem' }"
+    >
+      <p>{{ t('logoutConfirmText') }}</p>
+      <div class="dialog-actions">
+        <Button :label="t('cancel')" text @click="cancelLogout" />
+        <Button :label="t('logout')" icon="pi pi-sign-out" severity="danger" @click="confirmLogout" />
+      </div>
+    </Dialog>
   </div>
 </template>
 
@@ -46,6 +59,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import Dropdown from 'primevue/dropdown'
 import Tag from 'primevue/tag'
 import Toolbar from 'primevue/toolbar'
@@ -55,6 +69,7 @@ import { usePreferences } from './services/preferences'
 
 const router = useRouter()
 const user = ref(getStoredUser())
+const showLogoutDialog = ref(false)
 const { language, theme, setLanguage, setTheme, t } = usePreferences()
 
 const languageOptions = computed(() => [
@@ -72,10 +87,19 @@ function syncUser() {
   user.value = getStoredUser()
 }
 
-async function handleLogout() {
+function handleLogout() {
+  showLogoutDialog.value = true
+}
+
+async function confirmLogout() {
   logout()
   user.value = null
+  showLogoutDialog.value = false
   await router.push('/login')
+}
+
+function cancelLogout() {
+  showLogoutDialog.value = false
 }
 
 onMounted(() => {

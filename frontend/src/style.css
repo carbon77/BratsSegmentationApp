@@ -272,3 +272,42 @@ body {
     flex-wrap: wrap;
   }
 }
+
+.page-hero {
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(120deg, rgba(49, 46, 129, 0.12), rgba(8, 145, 178, 0.08));
+  border: 1px solid #dbeafe;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.page-subtitle {
+  margin: 0.3rem 0 0;
+  color: #475569;
+}
+
+.scan-actions,
+.dialog-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.app-theme-dark .page-hero {
+  background: linear-gradient(120deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+  border-color: #334155;
+}
+
+.app-theme-dark .page-subtitle {
+  color: #cbd5e1;
+}

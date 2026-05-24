@@ -2,6 +2,11 @@
   <section class="home-page">
     <Message v-if="pageError" severity="error">{{ pageError }}</Message>
 
+    <div class="page-hero">
+      <h1 class="page-title">{{ t('appName') }}</h1>
+      <p class="page-subtitle">{{ t('dashboardSubtitle') }}</p>
+    </div>
+
     <Splitter class="home-splitter">
       <SplitterPanel :size="55" :min-size="40">
         <UploadPanel
