@@ -35,8 +35,8 @@
       <Message v-if="metadataSavedMessage" severity="success">{{ metadataSavedMessage }}</Message>
       <Message v-if="orthancMessage" severity="success">{{ orthancMessage }}</Message>
 
-      <Splitter style="min-height: 42rem">
-        <SplitterPanel :size="18" :min-size="15">
+      <div :style="{ display: 'flex', gap: '1rem', alignItems: 'flex-start', minHeight: '42rem', flexWrap: 'wrap' }">
+        <div :style="{ flex: '0 1 14rem', minWidth: '12rem' }">
           <Panel :header="t('scanSections')">
             <Menu :model="sectionMenuItems" />
           </Panel>
@@ -53,9 +53,9 @@
               <Column field="label" :header="t('value')" />
             </DataTable>
           </Panel>
-        </SplitterPanel>
+        </div>
 
-        <SplitterPanel :size="55" :min-size="35">
+        <div :style="{ flex: '3 1 36rem', minWidth: '22rem' }">
           <SliceViewer v-if="activeSection === 'slices'" :case-id="caseId" :initial-slice="60" />
 
           <MetricsTable v-else-if="activeSection === 'metrics'" :metrics="metrics" />
@@ -89,9 +89,9 @@
               </Column>
             </DataTable>
           </Panel>
-        </SplitterPanel>
+        </div>
 
-        <SplitterPanel :size="27" :min-size="22">
+        <div :style="{ flex: '1 1 20rem', minWidth: '16rem' }">
           <Panel v-if="activeSection === 'slices'" :header="t('sectionSettings')">
             <Panel :header="t('dicomExportSettings')" toggleable>
               <Dropdown
@@ -138,8 +138,8 @@
               />
             </Panel>
           </Panel>
-        </SplitterPanel>
-      </Splitter>
+        </div>
+      </div>
     </template>
   </section>
 </template>
@@ -159,8 +159,6 @@ import Menu from 'primevue/menu'
 import Message from 'primevue/message'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
-import Splitter from 'primevue/splitter'
-import SplitterPanel from 'primevue/splitterpanel'
 import Tag from 'primevue/tag'
 
 import MetricsTable from '../components/scan/MetricsTable.vue'

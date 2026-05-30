@@ -28,8 +28,8 @@
 
     <ProgressSpinner v-if="isLoading && !plainImageSrc && !maskedImageSrc" style="width: 2rem; height: 2rem" strokeWidth="6" />
 
-    <Splitter v-else style="min-height: 32rem">
-      <SplitterPanel :size="50" :min-size="35">
+    <div v-else :style="{ display: 'flex', gap: '1rem', alignItems: 'stretch', minHeight: '32rem', flexWrap: 'wrap' }">
+      <div :style="{ flex: '1 1 24rem', minWidth: '18rem' }">
         <Panel :header="t('sliceWithoutMask')">
           <Image v-if="plainImageSrc" :src="plainImageSrc" :alt="plainImageAlt" preview :imageStyle="imageStyle" />
           <Message v-else severity="warn">{{ t('loadSlicePrompt') }}</Message>
@@ -45,9 +45,9 @@
             />
           </template>
         </Panel>
-      </SplitterPanel>
+      </div>
 
-      <SplitterPanel :size="50" :min-size="35">
+      <div :style="{ flex: '1 1 24rem', minWidth: '18rem' }">
         <Panel :header="t('sliceWithMask')">
           <Image v-if="maskedImageSrc" :src="maskedImageSrc" :alt="maskedImageAlt" preview :imageStyle="imageStyle" />
           <Message v-else severity="warn">{{ t('loadSlicePrompt') }}</Message>
@@ -63,8 +63,8 @@
             />
           </template>
         </Panel>
-      </SplitterPanel>
-    </Splitter>
+      </div>
+    </div>
   </Panel>
 </template>
 
@@ -80,8 +80,6 @@ import Message from 'primevue/message'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Slider from 'primevue/slider'
-import Splitter from 'primevue/splitter'
-import SplitterPanel from 'primevue/splitterpanel'
 import Toolbar from 'primevue/toolbar'
 
 import { downloadSlice } from '../../services/api'
