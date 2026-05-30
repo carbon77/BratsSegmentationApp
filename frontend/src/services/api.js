@@ -126,6 +126,13 @@ export async function downloadDicomArchive(caseId, modality) {
   return data
 }
 
+export async function sendDicomToOrthanc(caseId, modality) {
+  const { data } = await api.post(`/scans/${caseId}/dicom/orthanc`, null, {
+    params: { modality }
+  })
+  return data
+}
+
 export async function deleteScan(caseId) {
   await api.delete(`/scans/${caseId}`)
 }

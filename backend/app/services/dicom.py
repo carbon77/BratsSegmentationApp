@@ -1,7 +1,11 @@
 import io
+import os
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urljoin
+
+import httpx
 
 import nibabel as nib
 import numpy as np
@@ -10,6 +14,11 @@ from pydicom.uid import ExplicitVRLittleEndian, MRImageStorage, generate_uid
 
 
 DICOM_MIME_TYPE = 'application/zip'
+DEFAULT_ORTHANC_URL = 'http://orthanc:8042'
+
+
+class OrthancUploadError(RuntimeError):
+    pass
 
 
 def _dicom_date(value: str | None) -> str | None:
@@ -139,13 +148,13 @@ def _build_slice_dataset(
     return dataset
 
 
-def convert_nifti_to_dicom_zip(
+def iter_nifti_dicom_instances(
     nifti_path: str,
     *,
     case_id: str,
     modality: str,
     dicom_metadata: dict | None = None,
-) -> io.BytesIO:
+):
     volume, spacing = _load_volume(nifti_path)
     pixel_volume = _normalize_to_uint16(volume)
     study_uid = generate_uid()
@@ -154,26 +163,85 @@ def convert_nifti_to_dicom_zip(
     frame_uid = generate_uid()
     total_slices = int(pixel_volume.shape[2])
 
+    for slice_index in range(total_slices):
+        dataset = _build_slice_dataset(
+            pixel_volume[:, :, slice_index],
+            case_id=case_id,
+            modality=modality,
+            slice_index=slice_index,
+            total_slices=total_slices,
+            study_uid=study_uid,
+            series_uid=series_uid,
+            frame_uid=frame_uid,
+            spacing=spacing,
+            created_at=created_at,
+            dicom_metadata=dicom_metadata,
+        )
+        slice_buffer = io.BytesIO()
+        dataset.save_as(slice_buffer, write_like_original=False)
+        filename = Path(f'{case_id}-{modality}-slice-{slice_index + 1:04d}.dcm')
+        yield str(filename), slice_buffer.getvalue()
+
+
+def convert_nifti_to_dicom_zip(
+    nifti_path: str,
+    *,
+    case_id: str,
+    modality: str,
+    dicom_metadata: dict | None = None,
+) -> io.BytesIO:
     archive = io.BytesIO()
     with zipfile.ZipFile(archive, mode='w', compression=zipfile.ZIP_DEFLATED) as zip_file:
-        for slice_index in range(total_slices):
-            dataset = _build_slice_dataset(
-                pixel_volume[:, :, slice_index],
-                case_id=case_id,
-                modality=modality,
-                slice_index=slice_index,
-                total_slices=total_slices,
-                study_uid=study_uid,
-                series_uid=series_uid,
-                frame_uid=frame_uid,
-                spacing=spacing,
-                created_at=created_at,
-                dicom_metadata=dicom_metadata,
-            )
-            slice_buffer = io.BytesIO()
-            dataset.save_as(slice_buffer, write_like_original=False)
-            filename = Path(f'{case_id}-{modality}-slice-{slice_index + 1:04d}.dcm')
-            zip_file.writestr(str(filename), slice_buffer.getvalue())
+        for filename, instance in iter_nifti_dicom_instances(
+            nifti_path,
+            case_id=case_id,
+            modality=modality,
+            dicom_metadata=dicom_metadata,
+        ):
+            zip_file.writestr(filename, instance)
 
     archive.seek(0)
     return archive
+
+
+async def send_nifti_to_orthanc(
+    nifti_path: str,
+    *,
+    case_id: str,
+    modality: str,
+    dicom_metadata: dict | None = None,
+    orthanc_url: str | None = None,
+) -> dict:
+    target_base_url = orthanc_url or os.getenv('ORTHANC_URL', DEFAULT_ORTHANC_URL)
+    target_url = urljoin(target_base_url.rstrip('/') + '/', 'instances')
+    username = os.getenv('ORTHANC_USERNAME')
+    password = os.getenv('ORTHANC_PASSWORD')
+    timeout = float(os.getenv('ORTHANC_UPLOAD_TIMEOUT_SECONDS', '30'))
+    auth = (username, password) if username and password else None
+
+    uploaded_instances = []
+    try:
+        async with httpx.AsyncClient(timeout=timeout, auth=auth) as client:
+            for filename, instance in iter_nifti_dicom_instances(
+                nifti_path,
+                case_id=case_id,
+                modality=modality,
+                dicom_metadata=dicom_metadata,
+            ):
+                response = await client.post(
+                    target_url,
+                    content=instance,
+                    headers={'Content-Type': 'application/dicom'},
+                )
+                response.raise_for_status()
+                uploaded_instances.append({'filename': filename, 'orthanc': response.json()})
+    except httpx.HTTPError as exc:
+        raise OrthancUploadError(f'Could not upload DICOM instances to Orthanc at {target_url}') from exc
+
+    return {
+        'orthanc_url': target_url,
+        'case_id': case_id,
+        'modality': modality,
+        'instances_uploaded': len(uploaded_instances),
+        'instances': uploaded_instances,
+    }

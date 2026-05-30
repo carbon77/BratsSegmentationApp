@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
+
+import nibabel as nib
+import pytest
 
 import numpy as np
 
-from app.services.dicom import _build_slice_dataset
+from app.services.dicom import _build_slice_dataset, send_nifti_to_orthanc
 
 
 def test_build_slice_dataset_embeds_optional_dicom_metadata():
@@ -43,3 +47,52 @@ def test_build_slice_dataset_embeds_optional_dicom_metadata():
     assert dataset.SeriesDescription == "T1 source"
     assert dataset.InstitutionName == "General Hospital"
     assert str(dataset.ReferringPhysicianName) == "Smith^John"
+
+
+@pytest.mark.anyio
+async def test_send_nifti_to_orthanc_posts_each_dicom_slice(monkeypatch, tmp_path):
+    nifti_path = tmp_path / "case.nii"
+    image = nib.Nifti1Image(np.ones((2, 2, 3), dtype=np.float32), affine=np.eye(4))
+    nib.save(image, nifti_path)
+
+    posts = []
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"ID": f"instance-{len(posts)}"}
+
+    class FakeClient:
+        def __init__(self, *, timeout, auth):
+            self.timeout = timeout
+            self.auth = auth
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, url, *, content, headers):
+            posts.append(SimpleNamespace(url=url, content=content, headers=headers, auth=self.auth))
+            return FakeResponse()
+
+    monkeypatch.setenv("ORTHANC_USERNAME", "orthanc")
+    monkeypatch.setenv("ORTHANC_PASSWORD", "orthanc")
+    monkeypatch.setattr("app.services.dicom.httpx.AsyncClient", FakeClient)
+
+    result = await send_nifti_to_orthanc(
+        str(nifti_path),
+        case_id="case-1",
+        modality="t1",
+        orthanc_url="http://orthanc.example",
+    )
+
+    assert result["instances_uploaded"] == 3
+    assert len(posts) == 3
+    assert all(post.url == "http://orthanc.example/instances" for post in posts)
+    assert all(post.headers == {"Content-Type": "application/dicom"} for post in posts)
+    assert all(post.auth == ("orthanc", "orthanc") for post in posts)
+    assert all(post.content.startswith(b"\x00" * 128 + b"DICM") for post in posts)
