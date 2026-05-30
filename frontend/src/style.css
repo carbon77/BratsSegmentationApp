@@ -190,6 +190,10 @@ body {
   min-width: 10rem;
 }
 
+.modality-dropdown {
+  min-width: 9rem;
+}
+
 .app-theme-dark body {
   background: #020617;
   color: #e2e8f0;

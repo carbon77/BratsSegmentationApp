@@ -16,6 +16,23 @@
             />
           </div>
           <div class="scan-actions">
+            <Dropdown
+              v-model="dicomModality"
+              :options="modalityOptions"
+              optionLabel="label"
+              optionValue="value"
+              :placeholder="t('chooseModality')"
+              class="modality-dropdown"
+            />
+            <Button
+              :label="t('downloadDicom')"
+              icon="pi pi-file-export"
+              outlined
+              size="small"
+              :loading="isConvertingDicom"
+              :disabled="!dicomModality"
+              @click="downloadDicom"
+            />
             <Button :label="t('downloadJson')" icon="pi pi-download" outlined size="small" @click="downloadMetricsJson" />
             <Button :label="t('downloadCsv')" icon="pi pi-file" outlined size="small" @click="downloadMetricsCsv" />
             <Button
@@ -47,6 +64,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Divider from 'primevue/divider'
+import Dropdown from 'primevue/dropdown'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Panel from 'primevue/panel'
@@ -55,7 +73,7 @@ import Tag from 'primevue/tag'
 
 import MetricsTable from '../components/scan/MetricsTable.vue'
 import SliceViewer from '../components/scan/SliceViewer.vue'
-import { deleteScan, fetchMetrics, fetchScans, patchScanTitle } from '../services/api'
+import { deleteScan, downloadDicomArchive, fetchMetrics, fetchScans, patchScanTitle } from '../services/api'
 import { usePreferences } from '../services/preferences'
 
 const props = defineProps({
@@ -72,8 +90,15 @@ const editedTitle = ref('')
 const isLoading = ref(false)
 const isDeleting = ref(false)
 const isSavingTitle = ref(false)
+const isConvertingDicom = ref(false)
+const dicomModality = ref('t1')
 const errorMessage = ref('')
 const { t } = usePreferences()
+const modalities = ['t1', 't1ce', 't2', 'flair']
+const modalityOptions = modalities.map((modality) => ({
+  label: modality.toUpperCase(),
+  value: modality
+}))
 
 function downloadBlob(filename, content, mimeType) {
   const blob = new Blob([content], { type: mimeType })
@@ -113,6 +138,26 @@ function downloadMetricsCsv() {
   const rows = flattenMetrics(metrics.value)
   const csv = ['metric,value', ...rows.map(([metric, value]) => `${metric},${JSON.stringify(value)}`)].join('\n')
   downloadBlob(`${props.caseId}-metrics.csv`, csv, 'text/csv;charset=utf-8')
+}
+
+async function downloadDicom() {
+  if (!dicomModality.value) return
+
+  isConvertingDicom.value = true
+  errorMessage.value = ''
+  try {
+    const blob = await downloadDicomArchive(props.caseId, dicomModality.value)
+    const filename = `${props.caseId}-${dicomModality.value}-dicom.zip`
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(link.href)
+  } catch {
+    errorMessage.value = t('dicomConversionFailed')
+  } finally {
+    isConvertingDicom.value = false
+  }
 }
 
 async function loadTitle() {

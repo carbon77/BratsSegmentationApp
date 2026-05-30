@@ -109,6 +109,14 @@ export async function downloadSlice(caseId, sliceIdx, overlayModality = null) {
   return data
 }
 
+export async function downloadDicomArchive(caseId, modality) {
+  const { data } = await api.get(`/scans/${caseId}/dicom`, {
+    params: { modality },
+    responseType: 'blob'
+  })
+  return data
+}
+
 export async function deleteScan(caseId) {
   await api.delete(`/scans/${caseId}`)
 }
