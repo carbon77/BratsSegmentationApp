@@ -27,6 +27,17 @@ class Scan(Base):
     upload_prefix = Column(String, nullable=False)
     result_path = Column(String, nullable=True)
     metrics = Column(JSON, nullable=True)
+    dicom_patient_name = Column(String, nullable=True)
+    dicom_patient_id = Column(String, nullable=True)
+    dicom_patient_birth_date = Column(String, nullable=True)
+    dicom_patient_sex = Column(String, nullable=True)
+    dicom_accession_number = Column(String, nullable=True)
+    dicom_study_id = Column(String, nullable=True)
+    dicom_study_date = Column(String, nullable=True)
+    dicom_study_description = Column(String, nullable=True)
+    dicom_series_description = Column(String, nullable=True)
+    dicom_institution_name = Column(String, nullable=True)
+    dicom_referring_physician_name = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(
         DateTime,

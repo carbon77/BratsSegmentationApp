@@ -75,6 +75,11 @@ export async function fetchScans() {
   return data
 }
 
+export async function fetchScan(caseId) {
+  const { data } = await api.get(`/scans/${caseId}`)
+  return data
+}
+
 export async function uploadScan(filesByModality) {
   const formData = new FormData()
   Object.entries(filesByModality).forEach(([modality, file]) => {
@@ -94,6 +99,10 @@ export async function fetchMetrics(caseId) {
 
 export async function patchScanTitle(caseId, title) {
   await api.patch(`/scans/${caseId}`, { title })
+}
+
+export async function updateDicomMetadata(caseId, dicomMetadata) {
+  await api.patch(`/scans/${caseId}`, { dicom_metadata: dicomMetadata })
 }
 
 export async function downloadSlice(caseId, sliceIdx, overlayModality = null) {

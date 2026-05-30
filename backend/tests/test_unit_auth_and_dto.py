@@ -1,6 +1,6 @@
 import pytest
 
-from app.dto.dto import RegisterRequest
+from app.dto.dto import DicomMetadata, PatchScanRequest, RegisterRequest
 from app.services.auth import hash_password, verify_password
 
 
@@ -25,3 +25,17 @@ def test_register_request_normalizes_email_and_name():
 def test_register_request_rejects_invalid_email(email):
     with pytest.raises(ValueError):
         RegisterRequest(name="Alice", email=email, password="pass")
+
+
+def test_dicom_metadata_normalizes_empty_strings_to_none():
+    metadata = DicomMetadata(patient_name="  Alice^Doe  ", patient_id="   ")
+
+    assert metadata.patient_name == "Alice^Doe"
+    assert metadata.patient_id is None
+
+
+def test_patch_scan_request_accepts_metadata_without_title():
+    request = PatchScanRequest(dicom_metadata={"study_description": "  Follow-up MRI  "})
+
+    assert request.title is None
+    assert request.dicom_metadata.study_description == "Follow-up MRI"
