@@ -8,12 +8,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . /app
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --locked
+
+COPY . .
 
 ENV UV_NO_DEV=1
 
-WORKDIR /app
-
-RUN uv sync
-
-CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--port", "8000", "--host", "0.0.0.0"]
+CMD ["/.venv/bin/fastapi", "run", "app/main.py", "--port", "8000", "--host", "0.0.0.0"]
