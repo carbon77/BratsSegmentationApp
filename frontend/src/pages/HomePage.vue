@@ -1,11 +1,13 @@
 <template>
-  <section class="home-page">
+  <section>
     <Message v-if="pageError" severity="error">{{ pageError }}</Message>
 
-    <div class="page-hero">
-      <h1 class="page-title">{{ t('appName') }}</h1>
-      <p class="page-subtitle">{{ t('dashboardSubtitle') }}</p>
-    </div>
+    <Card>
+      <template #title>{{ t('appName') }}</template>
+      <template #subtitle>{{ t('dashboardSubtitle') }}</template>
+    </Card>
+
+    <Divider />
 
     <UploadPanel
       v-model="selectedFiles"
@@ -13,6 +15,8 @@
       :error-message="uploadError"
       @submit="submitUpload"
     />
+
+    <Divider />
 
     <ScansList
       :scans="scans"
@@ -25,6 +29,8 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
+import Card from 'primevue/card'
+import Divider from 'primevue/divider'
 import Message from 'primevue/message'
 
 import ScansList from '../components/home/ScansList.vue'

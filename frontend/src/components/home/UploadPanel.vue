@@ -1,72 +1,88 @@
 <template>
   <Panel :header="t('uploadPanelTitle')" toggleable>
-    <div class="upload-panel-content">
-      <Fieldset :legend="t('automaticAssignment')" class="section-block">
-        <p class="section-caption">{{ t('automaticAssignmentCaption') }}</p>
-        <Button :label="t('chooseFourFiles')" icon="pi pi-folder-open" @click="openAllPicker" />
-        <input
-          ref="allInputRef"
-          class="hidden-input"
-          type="file"
-          accept=".nii,.nii.gz"
-          multiple
-          @change="onAllFilesSelected"
-        />
-      </Fieldset>
+    <Fieldset :legend="t('automaticAssignment')">
+      <Message severity="info">{{ t('automaticAssignmentCaption') }}</Message>
+      <FileUpload
+        mode="basic"
+        customUpload
+        multiple
+        accept=".nii,.nii.gz"
+        :chooseLabel="t('chooseFourFiles')"
+        chooseIcon="pi pi-folder-open"
+        @select="onAllFilesSelected"
+      />
+    </Fieldset>
 
-      <Fieldset :legend="t('requiredModalities')" class="section-block">
-        <div class="modality-grid">
-          <div v-for="modality in modalities" :key="modality" class="modality-row">
-            <div>
-              <div class="modality-label">{{ modality.toUpperCase() }}</div>
-              <small class="modality-name">{{ selectedName(modality) }}</small>
-            </div>
-            <div class="row-actions">
-              <Tag :value="modelValue[modality] ? t('selected') : t('missing')" :severity="modelValue[modality] ? 'success' : 'warning'" />
-              <Button
-                :label="modelValue[modality] ? t('replace') : t('choose')"
-                icon="pi pi-upload"
-                outlined
-                @click="openPicker(modality)"
-              />
-              <input
-                :ref="(el) => setFileInputRef(modality, el)"
-                class="hidden-input"
-                type="file"
-                accept=".nii,.nii.gz"
-                @change="onFileSelected($event, modality)"
-              />
-            </div>
-          </div>
-        </div>
-      </Fieldset>
+    <Divider />
 
-      <Fieldset :legend="t('optionalTrueMask')" class="section-block">
-        <div class="modality-row">
-          <div>
-            <div class="modality-label">TRUE_MASK</div>
-            <small class="modality-name">{{ selectedName('true_mask') }}</small>
-          </div>
-          <div class="row-actions">
-            <Tag :value="modelValue.true_mask ? t('selected') : t('optional')" :severity="modelValue.true_mask ? 'success' : 'info'" />
-            <Button
-              :label="modelValue.true_mask ? t('replace') : t('choose')"
-              icon="pi pi-upload"
-              outlined
-              @click="openPicker('true_mask')"
+    <Fieldset :legend="t('requiredModalities')">
+      <DataTable :value="requiredRows" size="small" responsiveLayout="scroll">
+        <Column field="label" :header="t('title')" />
+        <Column :header="t('status')">
+          <template #body="slotProps">
+            <Tag
+              :value="modelValue[slotProps.data.key] ? t('selected') : t('missing')"
+              :severity="modelValue[slotProps.data.key] ? 'success' : 'warning'"
             />
-          </div>
-        </div>
-        <input
-          :ref="(el) => setFileInputRef('true_mask', el)"
-          class="hidden-input"
-          type="file"
-          accept=".nii,.nii.gz"
-          @change="onFileSelected($event, 'true_mask')"
-        />
-      </Fieldset>
+          </template>
+        </Column>
+        <Column :header="t('value')">
+          <template #body="slotProps">
+            {{ selectedName(slotProps.data.key) }}
+          </template>
+        </Column>
+        <Column :header="t('actions')">
+          <template #body="slotProps">
+            <FileUpload
+              mode="basic"
+              customUpload
+              accept=".nii,.nii.gz"
+              :chooseLabel="modelValue[slotProps.data.key] ? t('replace') : t('choose')"
+              chooseIcon="pi pi-upload"
+              @select="(event) => onFileSelected(event, slotProps.data.key)"
+            />
+          </template>
+        </Column>
+      </DataTable>
+    </Fieldset>
 
-      <div class="submit-row">
+    <Divider />
+
+    <Fieldset :legend="t('optionalTrueMask')">
+      <DataTable :value="optionalRows" size="small" responsiveLayout="scroll">
+        <Column field="label" :header="t('title')" />
+        <Column :header="t('status')">
+          <template #body="slotProps">
+            <Tag
+              :value="modelValue[slotProps.data.key] ? t('selected') : t('optional')"
+              :severity="modelValue[slotProps.data.key] ? 'success' : 'info'"
+            />
+          </template>
+        </Column>
+        <Column :header="t('value')">
+          <template #body="slotProps">
+            {{ selectedName(slotProps.data.key) }}
+          </template>
+        </Column>
+        <Column :header="t('actions')">
+          <template #body="slotProps">
+            <FileUpload
+              mode="basic"
+              customUpload
+              accept=".nii,.nii.gz"
+              :chooseLabel="modelValue[slotProps.data.key] ? t('replace') : t('choose')"
+              chooseIcon="pi pi-upload"
+              @select="(event) => onFileSelected(event, slotProps.data.key)"
+            />
+          </template>
+        </Column>
+      </DataTable>
+    </Fieldset>
+
+    <Divider />
+
+    <Toolbar>
+      <template #start>
         <Button
           :label="t('createScan')"
           icon="pi pi-cloud-upload"
@@ -74,21 +90,28 @@
           :disabled="!allModalitiesSelected || isUploading"
           @click="$emit('submit')"
         />
-        <small>{{ t('allModalitiesRequired') }}</small>
-      </div>
+      </template>
+      <template #end>
+        <Message severity="info">{{ t('allModalitiesRequired') }}</Message>
+      </template>
+    </Toolbar>
 
-      <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
-    </div>
+    <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
   </Panel>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed } from 'vue'
 import Button from 'primevue/button'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
+import Divider from 'primevue/divider'
 import Fieldset from 'primevue/fieldset'
+import FileUpload from 'primevue/fileupload'
 import Message from 'primevue/message'
 import Panel from 'primevue/panel'
 import Tag from 'primevue/tag'
+import Toolbar from 'primevue/toolbar'
 
 import { usePreferences } from '../../services/preferences'
 
@@ -110,10 +133,10 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'submit'])
 
 const modalities = ['t1', 't1ce', 't2', 'flair']
-const inputRefs = reactive({})
-const allInputRef = ref(null)
 const { t } = usePreferences()
 
+const requiredRows = computed(() => modalities.map((key) => ({ key, label: key.toUpperCase() })))
+const optionalRows = [{ key: 'true_mask', label: 'TRUE_MASK' }]
 const allModalitiesSelected = computed(() => modalities.every((m) => Boolean(props.modelValue[m])))
 
 function updateFile(modality, file) {
@@ -123,20 +146,12 @@ function updateFile(modality, file) {
   })
 }
 
-function setFileInputRef(modality, element) {
-  if (element) inputRefs[modality] = element
-}
-
-function openPicker(modality) {
-  inputRefs[modality]?.click()
-}
-
-function openAllPicker() {
-  allInputRef.value?.click()
+function filesFromEvent(event) {
+  return Array.from(event.files ?? event.originalEvent?.target?.files ?? [])
 }
 
 function onFileSelected(event, modality) {
-  const [file] = event.target.files
+  const [file] = filesFromEvent(event)
   updateFile(modality, file)
 }
 
@@ -150,7 +165,7 @@ function detectModality(filename) {
 }
 
 function onAllFilesSelected(event) {
-  const files = Array.from(event.target.files ?? [])
+  const files = filesFromEvent(event)
   const nextValue = { ...props.modelValue }
 
   files.forEach((file) => {

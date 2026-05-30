@@ -1,22 +1,30 @@
 <template>
-  <section class="auth-page">
-    <Card class="auth-card">
+  <section :style="{ maxWidth: '440px', margin: '4rem auto' }">
+    <Card>
       <template #title>{{ t('createAccount') }}</template>
       <template #subtitle>{{ t('registerSubtitle') }}</template>
       <template #content>
-        <form class="auth-form" @submit.prevent="submitRegister">
-          <label class="field-block">
-            <span>{{ t('name') }}</span>
-            <InputText v-model="name" autocomplete="name" required />
-          </label>
-          <label class="field-block">
-            <span>{{ t('email') }}</span>
-            <InputText v-model="email" type="email" autocomplete="email" required />
-          </label>
-          <label class="field-block">
-            <span>{{ t('password') }}</span>
-            <Password v-model="password" toggleMask autocomplete="new-password" required />
-          </label>
+        <form :style="{ display: 'grid', gap: '1rem' }" @submit.prevent="submitRegister">
+          <FloatLabel>
+            <InputText id="name" v-model="name" autocomplete="name" required :style="{ width: '100%' }" />
+            <label for="name">{{ t('name') }}</label>
+          </FloatLabel>
+          <FloatLabel>
+            <InputText id="email" v-model="email" type="email" autocomplete="email" required :style="{ width: '100%' }" />
+            <label for="email">{{ t('email') }}</label>
+          </FloatLabel>
+          <FloatLabel>
+            <Password
+              inputId="password"
+              v-model="password"
+              toggleMask
+              autocomplete="new-password"
+              required
+              :inputStyle="{ width: '100%' }"
+              :style="{ width: '100%' }"
+            />
+            <label for="password">{{ t('password') }}</label>
+          </FloatLabel>
           <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
           <Button :label="t('createAccount')" icon="pi pi-user-plus" type="submit" :loading="isSubmitting" />
         </form>
@@ -33,6 +41,7 @@ import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
+import FloatLabel from 'primevue/floatlabel'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Password from 'primevue/password'

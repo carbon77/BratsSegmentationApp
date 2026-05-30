@@ -1,4 +1,6 @@
 import { computed, readonly, ref } from 'vue'
+import laraDarkThemeUrl from 'primevue/resources/themes/lara-dark-blue/theme.css?url'
+import laraLightThemeUrl from 'primevue/resources/themes/lara-light-blue/theme.css?url'
 
 const LANGUAGE_KEY = 'brats_language'
 const THEME_KEY = 'brats_theme'
@@ -263,9 +265,18 @@ export function t(key, params = {}) {
 }
 
 function applyThemeClass() {
+  const themeLinkId = 'primevue-theme'
+  let themeLink = document.getElementById(themeLinkId)
+
+  if (!themeLink) {
+    themeLink = document.createElement('link')
+    themeLink.id = themeLinkId
+    themeLink.rel = 'stylesheet'
+    document.head.appendChild(themeLink)
+  }
+
+  themeLink.href = resolvedTheme.value === 'dark' ? laraDarkThemeUrl : laraLightThemeUrl
   document.documentElement.dataset.theme = resolvedTheme.value
-  document.documentElement.classList.toggle('app-theme-dark', resolvedTheme.value === 'dark')
-  document.documentElement.classList.toggle('app-theme-light', resolvedTheme.value === 'light')
 }
 
 export function setLanguage(nextLanguage) {
@@ -282,6 +293,7 @@ export function setTheme(nextTheme) {
 }
 
 export function initializePreferences() {
+  document.body.style.margin = '0'
   applyThemeClass()
 
   mediaQuery.addEventListener('change', (event) => {

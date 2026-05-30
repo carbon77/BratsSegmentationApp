@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Toolbar>
+    <Toolbar :style="{ minHeight: '3rem', paddingBlock: '0.25rem' }">
       <template #start>
         <RouterLink to="/">{{ t('appName') }}</RouterLink>
       </template>
@@ -9,6 +9,7 @@
           icon="pi pi-language"
           text
           rounded
+          size="small"
           :aria-label="t('language')"
           aria-haspopup="true"
           aria-controls="language_menu"
@@ -20,6 +21,7 @@
           icon="pi pi-palette"
           text
           rounded
+          size="small"
           :aria-label="t('theme')"
           aria-haspopup="true"
           aria-controls="theme_menu"
@@ -27,18 +29,18 @@
         />
         <Menu id="theme_menu" ref="themeMenu" :model="themeMenuItems" popup />
 
-        <Tag v-if="user" :value="user.name" severity="success" rounded />
+        <Badge v-if="user" :value="user.name" severity="success" />
         <RouterLink v-if="!user" to="/login">
-          <Button :label="t('login')" icon="pi pi-sign-in" text />
+          <Button :label="t('login')" icon="pi pi-sign-in" text size="small" />
         </RouterLink>
         <RouterLink v-if="!user" to="/register">
-          <Button :label="t('register')" icon="pi pi-user-plus" outlined />
+          <Button :label="t('register')" icon="pi pi-user-plus" outlined size="small" />
         </RouterLink>
-        <Button v-if="user" :label="t('logout')" icon="pi pi-sign-out" text @click="handleLogout" />
+        <Button v-if="user" :label="t('logout')" icon="pi pi-sign-out" text size="small" @click="handleLogout" />
       </template>
     </Toolbar>
 
-    <main>
+    <main :style="{ maxWidth: '1200px', margin: '0 auto', padding: '1rem' }">
       <RouterView />
     </main>
 
@@ -60,10 +62,10 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
+import Badge from 'primevue/badge'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Menu from 'primevue/menu'
-import Tag from 'primevue/tag'
 import Toolbar from 'primevue/toolbar'
 
 import { getStoredUser, logout } from './services/api'
