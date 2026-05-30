@@ -14,18 +14,9 @@
           :options="overlayOptions"
           optionLabel="label"
           optionValue="value"
-          :placeholder="t('overlayMaskOnly')"
+          :placeholder="t('chooseModality')"
         />
-        <Button :label="t('loadSlice')" icon="pi pi-image" :loading="isLoading" @click="loadImage" />
-        <Button
-          :label="t('downloadPng')"
-          icon="pi pi-download"
-          severity="secondary"
-          :loading="isDownloading"
-          :disabled="!imageSrc"
-          outlined
-          @click="downloadImage"
-        />
+        <Button :label="t('loadSlice')" icon="pi pi-refresh" :loading="isLoading" @click="loadImages" />
       </template>
     </Toolbar>
 
@@ -35,13 +26,50 @@
 
     <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
 
-    <Image v-if="imageSrc" :src="imageSrc" :alt="imageAlt" preview :imageStyle="imageStyle" />
-    <Message v-else severity="warn">{{ t('loadSlicePrompt') }}</Message>
+    <ProgressSpinner v-if="isLoading && !plainImageSrc && !maskedImageSrc" style="width: 2rem; height: 2rem" strokeWidth="6" />
+
+    <Splitter v-else style="min-height: 32rem">
+      <SplitterPanel :size="50" :min-size="35">
+        <Panel :header="t('sliceWithoutMask')">
+          <Image v-if="plainImageSrc" :src="plainImageSrc" :alt="plainImageAlt" preview :imageStyle="imageStyle" />
+          <Message v-else severity="warn">{{ t('loadSlicePrompt') }}</Message>
+          <template #footer>
+            <Button
+              :label="t('downloadPng')"
+              icon="pi pi-download"
+              severity="secondary"
+              :loading="isDownloadingPlain"
+              :disabled="!plainImageSrc"
+              outlined
+              @click="downloadImage('plain')"
+            />
+          </template>
+        </Panel>
+      </SplitterPanel>
+
+      <SplitterPanel :size="50" :min-size="35">
+        <Panel :header="t('sliceWithMask')">
+          <Image v-if="maskedImageSrc" :src="maskedImageSrc" :alt="maskedImageAlt" preview :imageStyle="imageStyle" />
+          <Message v-else severity="warn">{{ t('loadSlicePrompt') }}</Message>
+          <template #footer>
+            <Button
+              :label="t('downloadPng')"
+              icon="pi pi-download"
+              severity="secondary"
+              :loading="isDownloadingMasked"
+              :disabled="!maskedImageSrc"
+              outlined
+              @click="downloadImage('masked')"
+            />
+          </template>
+        </Panel>
+      </SplitterPanel>
+    </Splitter>
   </Panel>
 </template>
 
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Dropdown from 'primevue/dropdown'
 import Image from 'primevue/image'
@@ -50,7 +78,10 @@ import InputGroupAddon from 'primevue/inputgroupaddon'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
 import Panel from 'primevue/panel'
+import ProgressSpinner from 'primevue/progressspinner'
 import Slider from 'primevue/slider'
+import Splitter from 'primevue/splitter'
+import SplitterPanel from 'primevue/splitterpanel'
 import Toolbar from 'primevue/toolbar'
 
 import { downloadSlice } from '../../services/api'
@@ -69,66 +100,90 @@ const props = defineProps({
 
 const { t } = usePreferences()
 const maxSliceIdx = 95
-const overlayValues = [null, 't1', 't1ce', 't2', 'flair']
-const imageStyle = { width: '100%', maxWidth: '640px' }
+const overlayValues = ['t1', 't1ce', 't2', 'flair']
+const imageStyle = { width: '100%', display: 'block' }
+let requestId = 0
 
 const overlayOptions = computed(() => overlayValues.map((value) => ({
-  label: value ? `${t('overlay')} ${value.toUpperCase()}` : t('overlayMaskOnly'),
+  label: value.toUpperCase(),
   value
 })))
 
 const localSliceIdx = ref(props.initialSlice)
-const overlayModality = ref(null)
-const imageSrc = ref('')
+const overlayModality = ref('t1')
+const plainImageSrc = ref('')
+const maskedImageSrc = ref('')
 const isLoading = ref(false)
-const isDownloading = ref(false)
+const isDownloadingPlain = ref(false)
+const isDownloadingMasked = ref(false)
 const errorMessage = ref('')
 
-const imageAlt = computed(() => {
-  if (!overlayModality.value) return t('maskSliceAlt')
-  return t('overlaySliceAlt', { modality: overlayModality.value.toUpperCase() })
-})
+const plainImageAlt = computed(() => t('plainSliceAlt', { modality: overlayModality.value.toUpperCase() }))
+const maskedImageAlt = computed(() => t('overlaySliceAlt', { modality: overlayModality.value.toUpperCase() }))
 
-function clearObjectUrl() {
-  if (imageSrc.value) {
-    URL.revokeObjectURL(imageSrc.value)
-    imageSrc.value = ''
-  }
+function revokeObjectUrl(url) {
+  if (url) URL.revokeObjectURL(url)
 }
 
-async function loadImage() {
+function clearObjectUrls() {
+  revokeObjectUrl(plainImageSrc.value)
+  revokeObjectUrl(maskedImageSrc.value)
+  plainImageSrc.value = ''
+  maskedImageSrc.value = ''
+}
+
+async function loadImages() {
+  const currentRequestId = ++requestId
   isLoading.value = true
   errorMessage.value = ''
 
   try {
     const sliceIdx = localSliceIdx.value ?? 0
-    const blob = await downloadSlice(props.caseId, sliceIdx, overlayModality.value)
-    clearObjectUrl()
-    imageSrc.value = URL.createObjectURL(blob)
+    const [plainBlob, maskedBlob] = await Promise.all([
+      downloadSlice(props.caseId, sliceIdx, overlayModality.value, false),
+      downloadSlice(props.caseId, sliceIdx, overlayModality.value, true)
+    ])
+
+    if (currentRequestId !== requestId) return
+
+    const nextPlainUrl = URL.createObjectURL(plainBlob)
+    const nextMaskedUrl = URL.createObjectURL(maskedBlob)
+    clearObjectUrls()
+    plainImageSrc.value = nextPlainUrl
+    maskedImageSrc.value = nextMaskedUrl
   } catch {
-    clearObjectUrl()
-    errorMessage.value = t('sliceLoadFailed')
+    if (currentRequestId === requestId) {
+      clearObjectUrls()
+      errorMessage.value = t('sliceLoadFailed')
+    }
   } finally {
-    isLoading.value = false
+    if (currentRequestId === requestId) isLoading.value = false
   }
 }
 
-function downloadImage() {
-  if (!imageSrc.value) return
+function downloadImage(kind) {
+  const isPlain = kind === 'plain'
+  const imageSrc = isPlain ? plainImageSrc.value : maskedImageSrc.value
+  if (!imageSrc) return
 
-  const overlaySuffix = overlayModality.value ? `-${overlayModality.value}-cover` : '-mask-only'
-  isDownloading.value = true
+  if (isPlain) isDownloadingPlain.value = true
+  else isDownloadingMasked.value = true
+
+  const maskSuffix = isPlain ? 'without-mask' : 'with-mask'
   const link = document.createElement('a')
-  link.href = imageSrc.value
-  link.download = `${props.caseId}-slice-${localSliceIdx.value ?? 0}${overlaySuffix}.png`
+  link.href = imageSrc
+  link.download = `${props.caseId}-slice-${localSliceIdx.value ?? 0}-${overlayModality.value}-${maskSuffix}.png`
   link.click()
-  isDownloading.value = false
+
+  if (isPlain) isDownloadingPlain.value = false
+  else isDownloadingMasked.value = false
 }
 
-watch([localSliceIdx, overlayModality], () => {
-  clearObjectUrl()
-  errorMessage.value = ''
-})
+watch([localSliceIdx, overlayModality], loadImages)
 
-onUnmounted(clearObjectUrl)
+onMounted(loadImages)
+onUnmounted(() => {
+  requestId += 1
+  clearObjectUrls()
+})
 </script>
