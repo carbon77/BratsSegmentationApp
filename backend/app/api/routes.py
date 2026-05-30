@@ -7,7 +7,7 @@ from sqlalchemy.orm.session import Session
 
 from app.db.database import get_db, SessionLocal
 from app.db.models import Scan, User
-from app.dto.dto import AuthRequest, PatchScanRequest, RegisterRequest
+from app.dto.dto import AuthRequest, DicomMetadata, PatchScanRequest, RegisterRequest
 from app.services.auth import create_access_token, get_current_user, hash_password, verify_password
 from app.services.dicom import DICOM_MIME_TYPE, convert_nifti_to_dicom_zip
 from app.services.preprocessing import preprocess_modality_slice
@@ -19,6 +19,20 @@ from app.services.tasks import enqueue_segmentation_task
 router = APIRouter()
 
 MODALITIES = ('t1', 't1ce', 't2', 'flair')
+
+DICOM_METADATA_FIELDS = (
+    'patient_name',
+    'patient_id',
+    'patient_birth_date',
+    'patient_sex',
+    'accession_number',
+    'study_id',
+    'study_date',
+    'study_description',
+    'series_description',
+    'institution_name',
+    'referring_physician_name',
+)
 
 
 def _user_to_dict(user: User) -> dict:
@@ -37,11 +51,22 @@ def _auth_response(user: User) -> dict:
     }
 
 
+def _scan_dicom_metadata_to_dict(scan: Scan) -> dict:
+    return {field: getattr(scan, f'dicom_{field}', None) for field in DICOM_METADATA_FIELDS}
+
+
+def _apply_scan_dicom_metadata(scan: Scan, metadata: DicomMetadata) -> None:
+    payload = metadata.model_dump()
+    for field in DICOM_METADATA_FIELDS:
+        setattr(scan, f'dicom_{field}', payload.get(field))
+
+
 def _scan_to_dict(scan: Scan) -> dict:
     return {
         'case_id': scan.case_id,
         'title': scan.title,
         'status': scan.status,
+        'dicom_metadata': _scan_dicom_metadata_to_dict(scan),
     }
 
 
@@ -136,7 +161,6 @@ async def get_scans(db: Session = Depends(get_db), current_user: User = Depends(
     scans = db.query(Scan).filter(Scan.user_id == current_user.id).order_by(Scan.created_at.desc()).all()
     return [_scan_to_dict(scan) for scan in scans]
 
-
 @router.get('/scans/events')
 async def scan_events(current_user: User = Depends(get_current_user)):
     async def event_stream():
@@ -166,6 +190,16 @@ async def scan_events(current_user: User = Depends(get_current_user)):
             'X-Accel-Buffering': 'no',
         },
     )
+
+
+
+@router.get('/scans/{case_id}')
+async def get_scan(
+        case_id: str,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+):
+    return _scan_to_dict(_get_scan(db, case_id, current_user))
 
 
 @router.get('/scans/{case_id}/result/images')
@@ -229,6 +263,7 @@ async def convert_scan_modality_to_dicom(
                 local_paths[modality],
                 case_id=case_id,
                 modality=modality,
+                dicom_metadata=_scan_dicom_metadata_to_dict(scan),
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -263,7 +298,10 @@ async def patch_scan(
         current_user: User = Depends(get_current_user),
 ):
     scan = _get_scan(db, case_id, current_user)
-    scan.title = request.title
+    if request.title is not None:
+        scan.title = request.title
+    if request.dicom_metadata is not None:
+        _apply_scan_dicom_metadata(scan, request.dicom_metadata)
     db.add(scan)
     db.commit()
     return Response(status_code=204)

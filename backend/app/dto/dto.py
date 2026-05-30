@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, field_validator
 
 
@@ -32,5 +34,39 @@ class TokenResponse(BaseModel):
     user: dict
 
 
+class DicomMetadata(BaseModel):
+    patient_name: str | None = None
+    patient_id: str | None = None
+    patient_birth_date: str | None = None
+    patient_sex: str | None = None
+    accession_number: str | None = None
+    study_id: str | None = None
+    study_date: str | None = None
+    study_description: str | None = None
+    series_description: str | None = None
+    institution_name: str | None = None
+    referring_physician_name: str | None = None
+
+    @field_validator('*', mode='before')
+    @classmethod
+    def empty_strings_to_none(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            normalized = value.strip()
+            return normalized or None
+        return value
+
+
 class PatchScanRequest(BaseModel):
-    title: str
+    title: str | None = None
+    dicom_metadata: DicomMetadata | None = None
+
+    @field_validator('title')
+    @classmethod
+    def validate_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError('Title is required')
+        return normalized

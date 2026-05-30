@@ -12,6 +12,19 @@ from pydicom.uid import ExplicitVRLittleEndian, MRImageStorage, generate_uid
 DICOM_MIME_TYPE = 'application/zip'
 
 
+def _dicom_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    return value.replace('-', '')
+
+
+def _first_metadata_value(metadata: dict | None, key: str, fallback: str) -> str:
+    if not metadata:
+        return fallback
+    value = metadata.get(key)
+    return str(value) if value else fallback
+
+
 def _load_volume(nifti_path: str) -> tuple[np.ndarray, tuple[float, float, float]]:
     image = nib.load(nifti_path)
     data = np.asarray(image.get_fdata(dtype=np.float32))
@@ -50,6 +63,7 @@ def _build_slice_dataset(
     frame_uid: str,
     spacing: tuple[float, float, float],
     created_at: datetime,
+    dicom_metadata: dict | None,
 ) -> FileDataset:
     sop_instance_uid = generate_uid()
     file_meta = FileMetaDataset()
@@ -69,15 +83,33 @@ def _build_slice_dataset(
     dataset.SeriesInstanceUID = series_uid
     dataset.FrameOfReferenceUID = frame_uid
 
-    dataset.PatientName = f'BRATS^{case_id}'
-    dataset.PatientID = case_id
+    dataset.PatientName = _first_metadata_value(dicom_metadata, 'patient_name', f'BRATS^{case_id}')
+    dataset.PatientID = _first_metadata_value(dicom_metadata, 'patient_id', case_id)
+    if dicom_metadata:
+        if dicom_metadata.get('patient_birth_date'):
+            dataset.PatientBirthDate = _dicom_date(dicom_metadata['patient_birth_date'])
+        if dicom_metadata.get('patient_sex'):
+            dataset.PatientSex = dicom_metadata['patient_sex']
+        if dicom_metadata.get('accession_number'):
+            dataset.AccessionNumber = dicom_metadata['accession_number']
+        if dicom_metadata.get('study_id'):
+            dataset.StudyID = dicom_metadata['study_id']
+        if dicom_metadata.get('institution_name'):
+            dataset.InstitutionName = dicom_metadata['institution_name']
+        if dicom_metadata.get('referring_physician_name'):
+            dataset.ReferringPhysicianName = dicom_metadata['referring_physician_name']
     dataset.Modality = 'MR'
     dataset.BodyPartExamined = 'BRAIN'
-    dataset.StudyDescription = 'BraTS MRI scan'
-    dataset.SeriesDescription = f'{modality.upper()} converted from NIfTI'
+    dataset.StudyDescription = _first_metadata_value(dicom_metadata, 'study_description', 'BraTS MRI scan')
+    dataset.SeriesDescription = _first_metadata_value(
+        dicom_metadata,
+        'series_description',
+        f'{modality.upper()} converted from NIfTI',
+    )
     dataset.Manufacturer = 'BratsSegmentationApp'
 
-    dataset.StudyDate = created_at.strftime('%Y%m%d')
+    dataset.StudyDate = _dicom_date(dicom_metadata.get('study_date')) if dicom_metadata else None
+    dataset.StudyDate = dataset.StudyDate or created_at.strftime('%Y%m%d')
     dataset.StudyTime = created_at.strftime('%H%M%S')
     dataset.SeriesDate = dataset.StudyDate
     dataset.SeriesTime = dataset.StudyTime
@@ -107,7 +139,13 @@ def _build_slice_dataset(
     return dataset
 
 
-def convert_nifti_to_dicom_zip(nifti_path: str, *, case_id: str, modality: str) -> io.BytesIO:
+def convert_nifti_to_dicom_zip(
+    nifti_path: str,
+    *,
+    case_id: str,
+    modality: str,
+    dicom_metadata: dict | None = None,
+) -> io.BytesIO:
     volume, spacing = _load_volume(nifti_path)
     pixel_volume = _normalize_to_uint16(volume)
     study_uid = generate_uid()
@@ -130,6 +168,7 @@ def convert_nifti_to_dicom_zip(nifti_path: str, *, case_id: str, modality: str) 
                 frame_uid=frame_uid,
                 spacing=spacing,
                 created_at=created_at,
+                dicom_metadata=dicom_metadata,
             )
             slice_buffer = io.BytesIO()
             dataset.save_as(slice_buffer, write_like_original=False)

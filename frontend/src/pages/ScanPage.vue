@@ -51,6 +51,44 @@
 
       <div v-else class="scan-content">
         <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+        <Message v-if="metadataSavedMessage" severity="success">{{ metadataSavedMessage }}</Message>
+
+        <section class="metadata-panel" aria-labelledby="dicom-metadata-title">
+          <div>
+            <h3 id="dicom-metadata-title" class="section-title">{{ t('dicomMetadata') }}</h3>
+            <p class="section-caption">{{ t('dicomMetadataCaption') }}</p>
+          </div>
+          <div class="metadata-form">
+            <label v-for="field in metadataFields" :key="field.key" class="field-block">
+              <span>{{ t(field.labelKey) }}</span>
+              <Dropdown
+                v-if="field.type === 'select'"
+                v-model="editedDicomMetadata[field.key]"
+                :options="field.options"
+                optionLabel="label"
+                optionValue="value"
+                :placeholder="t('dicomMetadataEmpty')"
+                showClear
+              />
+              <InputText
+                v-else
+                v-model="editedDicomMetadata[field.key]"
+                :type="field.type || 'text'"
+                :placeholder="t('dicomMetadataEmpty')"
+              />
+            </label>
+          </div>
+          <div class="metadata-actions">
+            <Button
+              :label="t('saveDicomMetadata')"
+              icon="pi pi-save"
+              size="small"
+              :loading="isSavingMetadata"
+              @click="saveDicomMetadata"
+            />
+          </div>
+        </section>
+
         <MetricsTable :metrics="metrics" />
         <Divider />
         <SliceViewer :case-id="caseId" :initial-slice="60" />
@@ -60,7 +98,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Divider from 'primevue/divider'
@@ -73,7 +111,7 @@ import Tag from 'primevue/tag'
 
 import MetricsTable from '../components/scan/MetricsTable.vue'
 import SliceViewer from '../components/scan/SliceViewer.vue'
-import { deleteScan, downloadDicomArchive, fetchMetrics, fetchScans, patchScanTitle } from '../services/api'
+import { deleteScan, downloadDicomArchive, fetchMetrics, fetchScan, fetchScans, patchScanTitle, updateDicomMetadata } from '../services/api'
 import { usePreferences } from '../services/preferences'
 
 const props = defineProps({
@@ -90,15 +128,64 @@ const editedTitle = ref('')
 const isLoading = ref(false)
 const isDeleting = ref(false)
 const isSavingTitle = ref(false)
+const isSavingMetadata = ref(false)
 const isConvertingDicom = ref(false)
 const dicomModality = ref('t1')
 const errorMessage = ref('')
+const metadataSavedMessage = ref('')
 const { t } = usePreferences()
 const modalities = ['t1', 't1ce', 't2', 'flair']
 const modalityOptions = modalities.map((modality) => ({
   label: modality.toUpperCase(),
   value: modality
 }))
+const sexOptions = [
+  { label: t('dicomPatientSexMale'), value: 'M' },
+  { label: t('dicomPatientSexFemale'), value: 'F' },
+  { label: t('dicomPatientSexOther'), value: 'O' }
+]
+const metadataFields = [
+  { key: 'patient_name', labelKey: 'dicomPatientName' },
+  { key: 'patient_id', labelKey: 'dicomPatientId' },
+  { key: 'patient_birth_date', labelKey: 'dicomPatientBirthDate', type: 'date' },
+  { key: 'patient_sex', labelKey: 'dicomPatientSex', type: 'select', options: sexOptions },
+  { key: 'accession_number', labelKey: 'dicomAccessionNumber' },
+  { key: 'study_id', labelKey: 'dicomStudyId' },
+  { key: 'study_date', labelKey: 'dicomStudyDate', type: 'date' },
+  { key: 'study_description', labelKey: 'dicomStudyDescription' },
+  { key: 'series_description', labelKey: 'dicomSeriesDescription' },
+  { key: 'institution_name', labelKey: 'dicomInstitutionName' },
+  { key: 'referring_physician_name', labelKey: 'dicomReferringPhysicianName' }
+]
+const editedDicomMetadata = reactive(createEmptyDicomMetadata())
+
+function createEmptyDicomMetadata() {
+  return {
+    patient_name: '',
+    patient_id: '',
+    patient_birth_date: '',
+    patient_sex: '',
+    accession_number: '',
+    study_id: '',
+    study_date: '',
+    study_description: '',
+    series_description: '',
+    institution_name: '',
+    referring_physician_name: ''
+  }
+}
+
+function assignDicomMetadata(metadata = {}) {
+  Object.keys(editedDicomMetadata).forEach((key) => {
+    editedDicomMetadata[key] = metadata?.[key] ?? ''
+  })
+}
+
+function dicomMetadataPayload() {
+  return Object.fromEntries(
+    Object.entries(editedDicomMetadata).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
+  )
+}
 
 function downloadBlob(filename, content, mimeType) {
   const blob = new Blob([content], { type: mimeType })
@@ -160,15 +247,23 @@ async function downloadDicom() {
   }
 }
 
-async function loadTitle() {
+async function loadScanDetails() {
   try {
-    const scans = await fetchScans()
-    const currentScan = scans.find((scan) => scan.case_id === props.caseId)
+    const currentScan = await fetchScan(props.caseId)
     title.value = currentScan?.title || t('scanFallback', { caseId: props.caseId })
     editedTitle.value = title.value
+    assignDicomMetadata(currentScan?.dicom_metadata)
   } catch {
-    title.value = props.caseId
-    editedTitle.value = props.caseId
+    try {
+      const scans = await fetchScans()
+      const currentScan = scans.find((scan) => scan.case_id === props.caseId)
+      title.value = currentScan?.title || t('scanFallback', { caseId: props.caseId })
+      editedTitle.value = title.value
+      assignDicomMetadata(currentScan?.dicom_metadata)
+    } catch {
+      title.value = props.caseId
+      editedTitle.value = props.caseId
+    }
   }
 }
 
@@ -202,6 +297,20 @@ async function saveTitle() {
   }
 }
 
+async function saveDicomMetadata() {
+  isSavingMetadata.value = true
+  errorMessage.value = ''
+  metadataSavedMessage.value = ''
+  try {
+    await updateDicomMetadata(props.caseId, dicomMetadataPayload())
+    metadataSavedMessage.value = t('dicomMetadataSaved')
+  } catch {
+    errorMessage.value = t('dicomMetadataUpdateFailed')
+  } finally {
+    isSavingMetadata.value = false
+  }
+}
+
 async function removeScan() {
   isDeleting.value = true
   errorMessage.value = ''
@@ -217,5 +326,5 @@ async function removeScan() {
 }
 
 onMounted(loadMetrics)
-onMounted(loadTitle)
+onMounted(loadScanDetails)
 </script>

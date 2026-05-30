@@ -315,3 +315,36 @@ body {
 .app-theme-dark .page-subtitle {
   color: #cbd5e1;
 }
+
+.section-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.metadata-panel {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.metadata-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.metadata-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.metadata-form .p-dropdown,
+.metadata-form .p-inputtext {
+  width: 100%;
+}
+
+.app-theme-dark .metadata-panel {
+  border-color: #334155;
+}
