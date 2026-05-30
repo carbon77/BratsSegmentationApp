@@ -1,42 +1,44 @@
 <template>
-  <div class="app-shell">
-    <Toolbar class="app-toolbar">
+  <div>
+    <Toolbar>
       <template #start>
-        <RouterLink to="/" class="brand-link">{{ t('appName') }}</RouterLink>
+        <RouterLink to="/">{{ t('appName') }}</RouterLink>
       </template>
       <template #end>
-        <div class="toolbar-actions">
-          <Dropdown
-            :modelValue="language"
-            :options="languageOptions"
-            optionLabel="label"
-            optionValue="value"
-            class="toolbar-dropdown"
-            :placeholder="t('language')"
-            @update:modelValue="setLanguage"
-          />
-          <Dropdown
-            :modelValue="theme"
-            :options="themeOptions"
-            optionLabel="label"
-            optionValue="value"
-            class="toolbar-dropdown"
-            :placeholder="t('theme')"
-            @update:modelValue="setTheme"
-          />
-          <Tag v-if="user" :value="user.name" severity="success" rounded />
-          <RouterLink v-if="!user" to="/login">
-            <Button :label="t('login')" icon="pi pi-sign-in" text />
-          </RouterLink>
-          <RouterLink v-if="!user" to="/register">
-            <Button :label="t('register')" icon="pi pi-user-plus" outlined />
-          </RouterLink>
-          <Button v-if="user" :label="t('logout')" icon="pi pi-sign-out" text @click="handleLogout" />
-        </div>
+        <Button
+          icon="pi pi-language"
+          text
+          rounded
+          :aria-label="t('language')"
+          aria-haspopup="true"
+          aria-controls="language_menu"
+          @click="toggleLanguageMenu"
+        />
+        <Menu id="language_menu" ref="languageMenu" :model="languageMenuItems" popup />
+
+        <Button
+          icon="pi pi-palette"
+          text
+          rounded
+          :aria-label="t('theme')"
+          aria-haspopup="true"
+          aria-controls="theme_menu"
+          @click="toggleThemeMenu"
+        />
+        <Menu id="theme_menu" ref="themeMenu" :model="themeMenuItems" popup />
+
+        <Tag v-if="user" :value="user.name" severity="success" rounded />
+        <RouterLink v-if="!user" to="/login">
+          <Button :label="t('login')" icon="pi pi-sign-in" text />
+        </RouterLink>
+        <RouterLink v-if="!user" to="/register">
+          <Button :label="t('register')" icon="pi pi-user-plus" outlined />
+        </RouterLink>
+        <Button v-if="user" :label="t('logout')" icon="pi pi-sign-out" text @click="handleLogout" />
       </template>
     </Toolbar>
 
-    <main class="page-content">
+    <main>
       <RouterView />
     </main>
 
@@ -47,10 +49,10 @@
       :style="{ width: '28rem' }"
     >
       <p>{{ t('logoutConfirmText') }}</p>
-      <div class="dialog-actions">
+      <template #footer>
         <Button :label="t('cancel')" text @click="cancelLogout" />
         <Button :label="t('logout')" icon="pi pi-sign-out" severity="danger" @click="confirmLogout" />
-      </div>
+      </template>
     </Dialog>
   </div>
 </template>
@@ -60,7 +62,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
-import Dropdown from 'primevue/dropdown'
+import Menu from 'primevue/menu'
 import Tag from 'primevue/tag'
 import Toolbar from 'primevue/toolbar'
 
@@ -70,6 +72,8 @@ import { usePreferences } from './services/preferences'
 const router = useRouter()
 const user = ref(getStoredUser())
 const showLogoutDialog = ref(false)
+const languageMenu = ref(null)
+const themeMenu = ref(null)
 const { language, theme, setLanguage, setTheme, t } = usePreferences()
 
 const languageOptions = computed(() => [
@@ -78,10 +82,30 @@ const languageOptions = computed(() => [
 ])
 
 const themeOptions = computed(() => [
-  { label: t('themeLight'), value: 'light' },
-  { label: t('themeDark'), value: 'dark' },
-  { label: t('themeSystem'), value: 'system' }
+  { label: t('themeLight'), value: 'light', icon: 'pi pi-sun' },
+  { label: t('themeDark'), value: 'dark', icon: 'pi pi-moon' },
+  { label: t('themeSystem'), value: 'system', icon: 'pi pi-desktop' }
 ])
+
+const languageMenuItems = computed(() => languageOptions.value.map((option) => ({
+  label: option.label,
+  icon: language.value === option.value ? 'pi pi-check' : 'pi pi-circle',
+  command: () => setLanguage(option.value)
+})))
+
+const themeMenuItems = computed(() => themeOptions.value.map((option) => ({
+  label: option.label,
+  icon: theme.value === option.value ? 'pi pi-check' : option.icon,
+  command: () => setTheme(option.value)
+})))
+
+function toggleLanguageMenu(event) {
+  languageMenu.value.toggle(event)
+}
+
+function toggleThemeMenu(event) {
+  themeMenu.value.toggle(event)
+}
 
 function syncUser() {
   user.value = getStoredUser()

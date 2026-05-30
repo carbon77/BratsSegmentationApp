@@ -7,32 +7,25 @@
       <p class="page-subtitle">{{ t('dashboardSubtitle') }}</p>
     </div>
 
-    <Splitter class="home-splitter">
-      <SplitterPanel :size="55" :min-size="40">
-        <UploadPanel
-          v-model="selectedFiles"
-          :is-uploading="isUploading"
-          :error-message="uploadError"
-          @submit="submitUpload"
-        />
-      </SplitterPanel>
-      <SplitterPanel :size="45" :min-size="30">
-        <ScansList
-          :scans="scans"
-          :is-loading="isLoadingScans"
-          :deleting-case-id="deletingCaseId"
-          @delete="handleDeleteScan"
-        />
-      </SplitterPanel>
-    </Splitter>
+    <UploadPanel
+      v-model="selectedFiles"
+      :is-uploading="isUploading"
+      :error-message="uploadError"
+      @submit="submitUpload"
+    />
+
+    <ScansList
+      :scans="scans"
+      :is-loading="isLoadingScans"
+      :deleting-case-id="deletingCaseId"
+      @delete="handleDeleteScan"
+    />
   </section>
 </template>
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import Message from 'primevue/message'
-import Splitter from 'primevue/splitter'
-import SplitterPanel from 'primevue/splitterpanel'
 
 import ScansList from '../components/home/ScansList.vue'
 import UploadPanel from '../components/home/UploadPanel.vue'
