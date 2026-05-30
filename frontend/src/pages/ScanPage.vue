@@ -40,19 +40,6 @@
           <Panel :header="t('scanSections')">
             <Menu :model="sectionMenuItems" />
           </Panel>
-
-          <Divider />
-
-          <Panel :header="t('maskLegend')">
-            <DataTable :value="maskLegendRows" size="small" responsiveLayout="scroll">
-              <Column :header="t('metric')">
-                <template #body="slotProps">
-                  <Tag :value="slotProps.data.classId" :severity="slotProps.data.severity" />
-                </template>
-              </Column>
-              <Column field="label" :header="t('value')" />
-            </DataTable>
-          </Panel>
         </div>
 
         <div :style="{ flex: '3 1 36rem', minWidth: '22rem' }">
@@ -213,13 +200,6 @@ const metadataFields = [
   { key: 'referring_physician_name', labelKey: 'dicomReferringPhysicianName' }
 ]
 const editedDicomMetadata = reactive(createEmptyDicomMetadata())
-const maskLegendRows = computed(() => [
-  { classId: 0, label: t('maskBackground'), severity: 'secondary' },
-  { classId: 1, label: t('maskNecrotic'), severity: 'info' },
-  { classId: 2, label: t('maskEdema'), severity: 'warning' },
-  { classId: 3, label: t('maskEnhancing'), severity: 'danger' }
-])
-
 const sectionMenuItems = computed(() => [
   {
     label: t('slicesSection'),
