@@ -9,21 +9,24 @@
 
     <Divider />
 
-    <UploadPanel
-      v-model="selectedFiles"
-      :is-uploading="isUploading"
-      :error-message="uploadError"
-      @submit="submitUpload"
-    />
-
-    <Divider />
-
-    <ScansList
-      :scans="scans"
-      :is-loading="isLoadingScans"
-      :deleting-case-id="deletingCaseId"
-      @delete="handleDeleteScan"
-    />
+    <Splitter style="min-height: 42rem">
+      <SplitterPanel :size="52" :min-size="35">
+        <UploadPanel
+          v-model="selectedFiles"
+          :is-uploading="isUploading"
+          :error-message="uploadError"
+          @submit="submitUpload"
+        />
+      </SplitterPanel>
+      <SplitterPanel :size="48" :min-size="35">
+        <ScansList
+          :scans="scans"
+          :is-loading="isLoadingScans"
+          :deleting-case-id="deletingCaseId"
+          @delete="handleDeleteScan"
+        />
+      </SplitterPanel>
+    </Splitter>
   </section>
 </template>
 
@@ -32,6 +35,8 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import Card from 'primevue/card'
 import Divider from 'primevue/divider'
 import Message from 'primevue/message'
+import Splitter from 'primevue/splitter'
+import SplitterPanel from 'primevue/splitterpanel'
 
 import ScansList from '../components/home/ScansList.vue'
 import UploadPanel from '../components/home/UploadPanel.vue'

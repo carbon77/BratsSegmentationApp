@@ -1,6 +1,6 @@
 <template>
   <Panel :header="t('uploadPanelTitle')" toggleable>
-    <Fieldset :legend="t('automaticAssignment')">
+    <Panel :header="t('automaticAssignment')">
       <Message severity="info">{{ t('automaticAssignmentCaption') }}</Message>
       <FileUpload
         mode="basic"
@@ -11,11 +11,11 @@
         chooseIcon="pi pi-folder-open"
         @select="onAllFilesSelected"
       />
-    </Fieldset>
+    </Panel>
 
     <Divider />
 
-    <Fieldset :legend="t('requiredModalities')">
+    <Panel :header="t('requiredModalities')">
       <DataTable :value="requiredRows" size="small" responsiveLayout="scroll">
         <Column field="label" :header="t('title')" />
         <Column :header="t('status')">
@@ -44,11 +44,11 @@
           </template>
         </Column>
       </DataTable>
-    </Fieldset>
+    </Panel>
 
     <Divider />
 
-    <Fieldset :legend="t('optionalTrueMask')">
+    <Panel :header="t('optionalTrueMask')">
       <DataTable :value="optionalRows" size="small" responsiveLayout="scroll">
         <Column field="label" :header="t('title')" />
         <Column :header="t('status')">
@@ -77,7 +77,7 @@
           </template>
         </Column>
       </DataTable>
-    </Fieldset>
+    </Panel>
 
     <Divider />
 
@@ -106,7 +106,6 @@ import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Divider from 'primevue/divider'
-import Fieldset from 'primevue/fieldset'
 import FileUpload from 'primevue/fileupload'
 import Message from 'primevue/message'
 import Panel from 'primevue/panel'

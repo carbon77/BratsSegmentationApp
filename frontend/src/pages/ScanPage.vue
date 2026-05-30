@@ -24,110 +24,110 @@
           />
         </InputGroup>
       </template>
-      <template #content>
-        <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
+    </Card>
 
-        <div v-else>
-          <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
-          <Message v-if="metadataSavedMessage" severity="success">{{ metadataSavedMessage }}</Message>
-          <Message v-if="orthancMessage" severity="success">{{ orthancMessage }}</Message>
+    <Divider />
 
-          <Splitter style="min-height: 42rem">
-            <SplitterPanel :size="18" :min-size="15">
-              <Menu :model="sectionMenuItems" />
-            </SplitterPanel>
+    <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
 
-            <SplitterPanel :size="55" :min-size="35">
-              <Panel v-if="activeSection === 'slices'" :header="t('segmentationSlice')">
-                <SliceViewer :case-id="caseId" :initial-slice="60" />
-              </Panel>
+    <template v-else>
+      <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+      <Message v-if="metadataSavedMessage" severity="success">{{ metadataSavedMessage }}</Message>
+      <Message v-if="orthancMessage" severity="success">{{ orthancMessage }}</Message>
 
-              <Panel v-else-if="activeSection === 'metrics'" :header="t('metrics')">
-                <MetricsTable :metrics="metrics" />
-              </Panel>
+      <Splitter style="min-height: 42rem">
+        <SplitterPanel :size="18" :min-size="15">
+          <Panel :header="t('scanSections')">
+            <Menu :model="sectionMenuItems" />
+          </Panel>
+        </SplitterPanel>
 
-              <Panel v-else :header="t('dicomMetadata')">
-                <p>{{ t('dicomMetadataCaption') }}</p>
-                <DataTable :value="metadataFields" size="small" responsiveLayout="scroll">
-                  <Column :header="t('metric')">
-                    <template #body="slotProps">
-                      {{ t(slotProps.data.labelKey) }}
-                    </template>
-                  </Column>
-                  <Column :header="t('value')">
-                    <template #body="slotProps">
-                      <Dropdown
-                        v-if="slotProps.data.type === 'select'"
-                        v-model="editedDicomMetadata[slotProps.data.key]"
-                        :options="slotProps.data.options"
-                        optionLabel="label"
-                        optionValue="value"
-                        :placeholder="t('dicomMetadataEmpty')"
-                        showClear
-                      />
-                      <InputText
-                        v-else
-                        v-model="editedDicomMetadata[slotProps.data.key]"
-                        :type="slotProps.data.type || 'text'"
-                        :placeholder="t('dicomMetadataEmpty')"
-                      />
-                    </template>
-                  </Column>
-                </DataTable>
-              </Panel>
-            </SplitterPanel>
+        <SplitterPanel :size="55" :min-size="35">
+          <SliceViewer v-if="activeSection === 'slices'" :case-id="caseId" :initial-slice="60" />
 
-            <SplitterPanel :size="27" :min-size="22">
-              <Panel v-if="activeSection === 'slices'" :header="t('sectionSettings')">
-                <Fieldset :legend="t('dicomExportSettings')">
+          <MetricsTable v-else-if="activeSection === 'metrics'" :metrics="metrics" />
+
+          <Panel v-else :header="t('dicomMetadata')">
+            <Message severity="info">{{ t('dicomMetadataCaption') }}</Message>
+            <DataTable :value="metadataFields" size="small" responsiveLayout="scroll">
+              <Column :header="t('metric')">
+                <template #body="slotProps">
+                  {{ t(slotProps.data.labelKey) }}
+                </template>
+              </Column>
+              <Column :header="t('value')">
+                <template #body="slotProps">
                   <Dropdown
-                    v-model="dicomModality"
-                    :options="modalityOptions"
+                    v-if="slotProps.data.type === 'select'"
+                    v-model="editedDicomMetadata[slotProps.data.key]"
+                    :options="slotProps.data.options"
                     optionLabel="label"
                     optionValue="value"
-                    :placeholder="t('chooseModality')"
+                    :placeholder="t('dicomMetadataEmpty')"
+                    showClear
                   />
-                  <Button
-                    :label="t('downloadDicom')"
-                    icon="pi pi-file-export"
-                    outlined
-                    :loading="isConvertingDicom"
-                    :disabled="!dicomModality || isSendingOrthanc"
-                    @click="downloadDicom"
+                  <InputText
+                    v-else
+                    v-model="editedDicomMetadata[slotProps.data.key]"
+                    :type="slotProps.data.type || 'text'"
+                    :placeholder="t('dicomMetadataEmpty')"
                   />
-                  <Button
-                    :label="t('sendDicomToOrthanc')"
-                    icon="pi pi-send"
-                    outlined
-                    :loading="isSendingOrthanc"
-                    :disabled="!dicomModality || isConvertingDicom"
-                    @click="sendToOrthanc"
-                  />
-                </Fieldset>
-              </Panel>
+                </template>
+              </Column>
+            </DataTable>
+          </Panel>
+        </SplitterPanel>
 
-              <Panel v-else-if="activeSection === 'metrics'" :header="t('sectionSettings')">
-                <Fieldset :legend="t('metricsExportSettings')">
-                  <Button :label="t('downloadJson')" icon="pi pi-download" outlined @click="downloadMetricsJson" />
-                  <Button :label="t('downloadCsv')" icon="pi pi-file" outlined @click="downloadMetricsCsv" />
-                </Fieldset>
-              </Panel>
+        <SplitterPanel :size="27" :min-size="22">
+          <Panel v-if="activeSection === 'slices'" :header="t('sectionSettings')">
+            <Panel :header="t('dicomExportSettings')" toggleable>
+              <Dropdown
+                v-model="dicomModality"
+                :options="modalityOptions"
+                optionLabel="label"
+                optionValue="value"
+                :placeholder="t('chooseModality')"
+              />
+              <Divider />
+              <Button
+                :label="t('downloadDicom')"
+                icon="pi pi-file-export"
+                outlined
+                :loading="isConvertingDicom"
+                :disabled="!dicomModality || isSendingOrthanc"
+                @click="downloadDicom"
+              />
+              <Button
+                :label="t('sendDicomToOrthanc')"
+                icon="pi pi-send"
+                outlined
+                :loading="isSendingOrthanc"
+                :disabled="!dicomModality || isConvertingDicom"
+                @click="sendToOrthanc"
+              />
+            </Panel>
+          </Panel>
 
-              <Panel v-else :header="t('sectionSettings')">
-                <Fieldset :legend="t('metadataSettings')">
-                  <Button
-                    :label="t('saveDicomMetadata')"
-                    icon="pi pi-save"
-                    :loading="isSavingMetadata"
-                    @click="saveDicomMetadata"
-                  />
-                </Fieldset>
-              </Panel>
-            </SplitterPanel>
-          </Splitter>
-        </div>
-      </template>
-    </Card>
+          <Panel v-else-if="activeSection === 'metrics'" :header="t('sectionSettings')">
+            <Panel :header="t('metricsExportSettings')" toggleable>
+              <Button :label="t('downloadJson')" icon="pi pi-download" outlined @click="downloadMetricsJson" />
+              <Button :label="t('downloadCsv')" icon="pi pi-file" outlined @click="downloadMetricsCsv" />
+            </Panel>
+          </Panel>
+
+          <Panel v-else :header="t('sectionSettings')">
+            <Panel :header="t('metadataSettings')" toggleable>
+              <Button
+                :label="t('saveDicomMetadata')"
+                icon="pi pi-save"
+                :loading="isSavingMetadata"
+                @click="saveDicomMetadata"
+              />
+            </Panel>
+          </Panel>
+        </SplitterPanel>
+      </Splitter>
+    </template>
   </section>
 </template>
 
@@ -138,8 +138,8 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
+import Divider from 'primevue/divider'
 import Dropdown from 'primevue/dropdown'
-import Fieldset from 'primevue/fieldset'
 import InputGroup from 'primevue/inputgroup'
 import InputText from 'primevue/inputtext'
 import Menu from 'primevue/menu'

@@ -29,9 +29,9 @@
       </template>
     </Toolbar>
 
-    <Fieldset :legend="t('quickAdjust')">
+    <Panel :header="t('quickAdjust')">
       <Slider id="sliceSlider" v-model="localSliceIdx" :min="0" :max="maxSliceIdx" />
-    </Fieldset>
+    </Panel>
 
     <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
 
@@ -44,7 +44,6 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Dropdown from 'primevue/dropdown'
-import Fieldset from 'primevue/fieldset'
 import Image from 'primevue/image'
 import InputGroup from 'primevue/inputgroup'
 import InputGroupAddon from 'primevue/inputgroupaddon'
