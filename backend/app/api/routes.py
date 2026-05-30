@@ -9,6 +9,7 @@ from app.db.database import get_db, SessionLocal
 from app.db.models import Scan, User
 from app.dto.dto import AuthRequest, PatchScanRequest, RegisterRequest
 from app.services.auth import create_access_token, get_current_user, hash_password, verify_password
+from app.services.dicom import DICOM_MIME_TYPE, convert_nifti_to_dicom_zip
 from app.services.preprocessing import preprocess_modality_slice
 from app.services.results import get_slice_plot
 from app.services.storage import stage_uploaded_files, local_paths_for_case, load_result, \
@@ -205,6 +206,39 @@ async def result_images(
     buf = get_slice_plot(prediction, slice_idx, background_slice, overlay_modality)
     buf.seek(0)
     return StreamingResponse(buf, media_type='image/png')
+
+
+@router.get('/scans/{case_id}/dicom')
+async def convert_scan_modality_to_dicom(
+        case_id: str,
+        modality: str = Query(..., description='MRI modality to convert to DICOM.'),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+):
+    scan = _get_scan(db, case_id, current_user)
+    if modality not in MODALITIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f'modality must be one of: {", ".join(MODALITIES)}',
+        )
+
+    modality_uri = uploaded_file_uri(scan.upload_prefix, modality)
+    with local_paths_for_case({modality: modality_uri}) as local_paths:
+        try:
+            archive = convert_nifti_to_dicom_zip(
+                local_paths[modality],
+                case_id=case_id,
+                modality=modality,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    filename = f'{case_id}-{modality}-dicom.zip'
+    return StreamingResponse(
+        archive,
+        media_type=DICOM_MIME_TYPE,
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
 
 
 @router.delete('/scans/{case_id}')
