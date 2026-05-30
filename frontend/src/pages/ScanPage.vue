@@ -30,8 +30,17 @@
               outlined
               size="small"
               :loading="isConvertingDicom"
-              :disabled="!dicomModality"
+              :disabled="!dicomModality || isSendingOrthanc"
               @click="downloadDicom"
+            />
+            <Button
+              :label="t('sendDicomToOrthanc')"
+              icon="pi pi-send"
+              outlined
+              size="small"
+              :loading="isSendingOrthanc"
+              :disabled="!dicomModality || isConvertingDicom"
+              @click="sendToOrthanc"
             />
             <Button :label="t('downloadJson')" icon="pi pi-download" outlined size="small" @click="downloadMetricsJson" />
             <Button :label="t('downloadCsv')" icon="pi pi-file" outlined size="small" @click="downloadMetricsCsv" />
@@ -52,6 +61,7 @@
       <div v-else class="scan-content">
         <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
         <Message v-if="metadataSavedMessage" severity="success">{{ metadataSavedMessage }}</Message>
+        <Message v-if="orthancMessage" severity="success">{{ orthancMessage }}</Message>
 
         <section class="metadata-panel" aria-labelledby="dicom-metadata-title">
           <div>
@@ -111,7 +121,7 @@ import Tag from 'primevue/tag'
 
 import MetricsTable from '../components/scan/MetricsTable.vue'
 import SliceViewer from '../components/scan/SliceViewer.vue'
-import { deleteScan, downloadDicomArchive, fetchMetrics, fetchScan, fetchScans, patchScanTitle, updateDicomMetadata } from '../services/api'
+import { deleteScan, downloadDicomArchive, fetchMetrics, fetchScan, fetchScans, patchScanTitle, sendDicomToOrthanc, updateDicomMetadata } from '../services/api'
 import { usePreferences } from '../services/preferences'
 
 const props = defineProps({
@@ -130,9 +140,11 @@ const isDeleting = ref(false)
 const isSavingTitle = ref(false)
 const isSavingMetadata = ref(false)
 const isConvertingDicom = ref(false)
+const isSendingOrthanc = ref(false)
 const dicomModality = ref('t1')
 const errorMessage = ref('')
 const metadataSavedMessage = ref('')
+const orthancMessage = ref('')
 const { t } = usePreferences()
 const modalities = ['t1', 't1ce', 't2', 'flair']
 const modalityOptions = modalities.map((modality) => ({
@@ -244,6 +256,22 @@ async function downloadDicom() {
     errorMessage.value = t('dicomConversionFailed')
   } finally {
     isConvertingDicom.value = false
+  }
+}
+
+async function sendToOrthanc() {
+  if (!dicomModality.value) return
+
+  isSendingOrthanc.value = true
+  errorMessage.value = ''
+  orthancMessage.value = ''
+  try {
+    const result = await sendDicomToOrthanc(props.caseId, dicomModality.value)
+    orthancMessage.value = t('dicomOrthancSent', { count: result.instances_uploaded })
+  } catch {
+    errorMessage.value = t('dicomOrthancFailed')
+  } finally {
+    isSendingOrthanc.value = false
   }
 }
 

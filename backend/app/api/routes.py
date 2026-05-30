@@ -9,7 +9,7 @@ from app.db.database import get_db, SessionLocal
 from app.db.models import Scan, User
 from app.dto.dto import AuthRequest, DicomMetadata, PatchScanRequest, RegisterRequest
 from app.services.auth import create_access_token, get_current_user, hash_password, verify_password
-from app.services.dicom import DICOM_MIME_TYPE, convert_nifti_to_dicom_zip
+from app.services.dicom import DICOM_MIME_TYPE, OrthancUploadError, convert_nifti_to_dicom_zip, send_nifti_to_orthanc
 from app.services.preprocessing import preprocess_modality_slice
 from app.services.results import get_slice_plot
 from app.services.storage import stage_uploaded_files, local_paths_for_case, load_result, \
@@ -274,6 +274,35 @@ async def convert_scan_modality_to_dicom(
         media_type=DICOM_MIME_TYPE,
         headers={'Content-Disposition': f'attachment; filename="{filename}"'},
     )
+
+
+@router.post('/scans/{case_id}/dicom/orthanc')
+async def send_scan_modality_to_orthanc(
+        case_id: str,
+        modality: str = Query(..., description='MRI modality to convert to DICOM and upload to Orthanc.'),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user),
+):
+    scan = _get_scan(db, case_id, current_user)
+    if modality not in MODALITIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f'modality must be one of: {", ".join(MODALITIES)}',
+        )
+
+    modality_uri = uploaded_file_uri(scan.upload_prefix, modality)
+    with local_paths_for_case({modality: modality_uri}) as local_paths:
+        try:
+            return await send_nifti_to_orthanc(
+                local_paths[modality],
+                case_id=case_id,
+                modality=modality,
+                dicom_metadata=_scan_dicom_metadata_to_dict(scan),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except OrthancUploadError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.delete('/scans/{case_id}')
