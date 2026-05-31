@@ -295,7 +295,6 @@ export function setTheme(nextTheme) {
 }
 
 export function initializePreferences() {
-  document.body.style.margin = '0'
   applyThemeClass()
 
   mediaQuery.addEventListener('change', (event) => {

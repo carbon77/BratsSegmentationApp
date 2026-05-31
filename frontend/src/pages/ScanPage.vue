@@ -28,21 +28,21 @@
 
     <Divider />
 
-    <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
+    <ProgressSpinner v-if="isLoading" class="h-8 w-8" strokeWidth="6" />
 
     <template v-else>
       <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
       <Message v-if="metadataSavedMessage" severity="success">{{ metadataSavedMessage }}</Message>
       <Message v-if="orthancMessage" severity="success">{{ orthancMessage }}</Message>
 
-      <div :style="{ display: 'flex', gap: '1rem', alignItems: 'flex-start', minHeight: '42rem', flexWrap: 'wrap' }">
-        <div :style="{ flex: '0 1 14rem', minWidth: '12rem' }">
+      <div class="flex min-h-[42rem] flex-wrap items-start gap-4">
+        <div class="min-w-48 flex-[0_1_14rem]">
           <Panel :header="t('scanSections')">
             <Menu :model="sectionMenuItems" />
           </Panel>
         </div>
 
-        <div :style="{ flex: '3 1 36rem', minWidth: '22rem' }">
+        <div class="min-w-[22rem] flex-[3_1_36rem]">
           <SliceViewer v-if="activeSection === 'slices'" :case-id="caseId" :initial-slice="60" />
 
           <MetricsTable v-else-if="activeSection === 'metrics'" :metrics="metrics" />
@@ -78,7 +78,7 @@
           </Panel>
         </div>
 
-        <div :style="{ flex: '1 1 20rem', minWidth: '16rem' }">
+        <div class="min-w-64 flex-[1_1_20rem]">
           <Panel v-if="activeSection === 'slices'" :header="t('sectionSettings')">
             <Panel :header="t('dicomExportSettings')" toggleable>
               <Dropdown

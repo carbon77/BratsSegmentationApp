@@ -2,20 +2,22 @@
   <Panel :header="t('scansTitle')" toggleable>
     <Toolbar>
       <template #end>
-        <IconField>
-          <InputIcon class="pi pi-search" />
-          <InputText v-model="searchTerm" :placeholder="t('searchByTitle')" />
-        </IconField>
-        <Button
-          :label="sortDirection === 'asc' ? t('sortAsc') : t('sortDesc')"
-          :icon="sortDirection === 'asc' ? 'pi pi-sort-alpha-down' : 'pi pi-sort-alpha-up-alt'"
-          outlined
-          @click="toggleSortDirection"
-        />
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <IconField>
+            <InputIcon class="pi pi-search" />
+            <InputText v-model="searchTerm" :placeholder="t('searchByTitle')" />
+          </IconField>
+          <Button
+            :label="sortDirection === 'asc' ? t('sortAsc') : t('sortDesc')"
+            :icon="sortDirection === 'asc' ? 'pi pi-sort-alpha-down' : 'pi pi-sort-alpha-up-alt'"
+            outlined
+            @click="toggleSortDirection"
+          />
+        </div>
       </template>
     </Toolbar>
 
-    <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
+    <ProgressSpinner v-if="isLoading" class="h-8 w-8" strokeWidth="6" />
 
     <DataTable
       v-else
@@ -35,7 +37,7 @@
           <Tag :value="statusLabel(slotProps.data.status)" :severity="statusSeverity(slotProps.data.status)" />
         </template>
       </Column>
-      <Column :header="t('actions')" :style="{ width: '16rem' }">
+      <Column :header="t('actions')" class="w-64">
         <template #body="slotProps">
           <ButtonGroup>
             <RouterLink v-if="slotProps.data.status === 'completed'" :to="`/scans/${slotProps.data.case_id}`">

@@ -1,46 +1,48 @@
 <template>
-  <div>
-    <Toolbar :style="{ minHeight: '3rem', paddingBlock: '0.25rem' }">
+  <div class="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-200 [html[data-theme=dark]_&]:bg-slate-950 [html[data-theme=dark]_&]:text-slate-100">
+    <Toolbar class="min-h-12 py-1">
       <template #start>
         <RouterLink to="/">{{ t('appName') }}</RouterLink>
       </template>
       <template #end>
-        <Button
-          icon="pi pi-language"
-          text
-          rounded
-          size="small"
-          :aria-label="t('language')"
-          aria-haspopup="true"
-          aria-controls="language_menu"
-          @click="toggleLanguageMenu"
-        />
-        <Menu id="language_menu" ref="languageMenu" :model="languageMenuItems" popup />
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            icon="pi pi-language"
+            text
+            rounded
+            size="small"
+            :aria-label="t('language')"
+            aria-haspopup="true"
+            aria-controls="language_menu"
+            @click="toggleLanguageMenu"
+          />
+          <Menu id="language_menu" ref="languageMenu" :model="languageMenuItems" popup />
 
-        <Button
-          icon="pi pi-palette"
-          text
-          rounded
-          size="small"
-          :aria-label="t('theme')"
-          aria-haspopup="true"
-          aria-controls="theme_menu"
-          @click="toggleThemeMenu"
-        />
-        <Menu id="theme_menu" ref="themeMenu" :model="themeMenuItems" popup />
+          <Button
+            icon="pi pi-palette"
+            text
+            rounded
+            size="small"
+            :aria-label="t('theme')"
+            aria-haspopup="true"
+            aria-controls="theme_menu"
+            @click="toggleThemeMenu"
+          />
+          <Menu id="theme_menu" ref="themeMenu" :model="themeMenuItems" popup />
 
-        <Badge v-if="user" :value="user.name" severity="success" />
-        <RouterLink v-if="!user" to="/login">
-          <Button :label="t('login')" icon="pi pi-sign-in" text size="small" />
-        </RouterLink>
-        <RouterLink v-if="!user" to="/register">
-          <Button :label="t('register')" icon="pi pi-user-plus" outlined size="small" />
-        </RouterLink>
-        <Button v-if="user" :label="t('logout')" icon="pi pi-sign-out" text size="small" @click="handleLogout" />
+          <Badge v-if="user" :value="user.name" severity="success" />
+          <RouterLink v-if="!user" to="/login">
+            <Button :label="t('login')" icon="pi pi-sign-in" text size="small" />
+          </RouterLink>
+          <RouterLink v-if="!user" to="/register">
+            <Button :label="t('register')" icon="pi pi-user-plus" outlined size="small" />
+          </RouterLink>
+          <Button v-if="user" :label="t('logout')" icon="pi pi-sign-out" text size="small" @click="handleLogout" />
+        </div>
       </template>
     </Toolbar>
 
-    <main :style="{ maxWidth: '1200px', margin: '0 auto', padding: '1rem' }">
+    <main class="mx-auto w-full max-w-[1200px] p-4">
       <RouterView />
     </main>
 
@@ -48,7 +50,7 @@
       v-model:visible="showLogoutDialog"
       modal
       :header="t('logoutConfirmTitle')"
-      :style="{ width: '28rem' }"
+      class="w-[28rem] max-w-[calc(100vw-2rem)]"
     >
       <p>{{ t('logoutConfirmText') }}</p>
       <template #footer>

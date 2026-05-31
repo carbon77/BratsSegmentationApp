@@ -1,16 +1,16 @@
 <template>
-  <section :style="{ maxWidth: '440px', margin: '4rem auto' }">
+  <section class="mx-auto my-16 w-full max-w-[440px] px-4">
     <Card>
       <template #title>{{ t('createAccount') }}</template>
       <template #subtitle>{{ t('registerSubtitle') }}</template>
       <template #content>
-        <form :style="{ display: 'grid', gap: '1rem' }" @submit.prevent="submitRegister">
+        <form class="grid gap-4" @submit.prevent="submitRegister">
           <FloatLabel>
-            <InputText id="name" v-model="name" autocomplete="name" required :style="{ width: '100%' }" />
+            <InputText id="name" v-model="name" autocomplete="name" required class="w-full" />
             <label for="name">{{ t('name') }}</label>
           </FloatLabel>
           <FloatLabel>
-            <InputText id="email" v-model="email" type="email" autocomplete="email" required :style="{ width: '100%' }" />
+            <InputText id="email" v-model="email" type="email" autocomplete="email" required class="w-full" />
             <label for="email">{{ t('email') }}</label>
           </FloatLabel>
           <FloatLabel>
@@ -20,8 +20,8 @@
               toggleMask
               autocomplete="new-password"
               required
-              :inputStyle="{ width: '100%' }"
-              :style="{ width: '100%' }"
+              inputClass="w-full"
+              class="w-full"
             />
             <label for="password">{{ t('password') }}</label>
           </FloatLabel>

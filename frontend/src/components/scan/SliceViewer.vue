@@ -8,24 +8,26 @@
         </InputGroup>
       </template>
       <template #end>
-        <Dropdown
-          id="overlayModality"
-          v-model="overlayModality"
-          :options="overlayOptions"
-          optionLabel="label"
-          optionValue="value"
-          :placeholder="t('overlayMaskOnly')"
-        />
-        <Button :label="t('loadSlice')" icon="pi pi-image" :loading="isLoading" @click="loadImage" />
-        <Button
-          :label="t('downloadPng')"
-          icon="pi pi-download"
-          severity="secondary"
-          :loading="isDownloading"
-          :disabled="!imageSrc"
-          outlined
-          @click="downloadImage"
-        />
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <Dropdown
+            id="overlayModality"
+            v-model="overlayModality"
+            :options="overlayOptions"
+            optionLabel="label"
+            optionValue="value"
+            :placeholder="t('overlayMaskOnly')"
+          />
+          <Button :label="t('loadSlice')" icon="pi pi-image" :loading="isLoading" @click="loadImage" />
+          <Button
+            :label="t('downloadPng')"
+            icon="pi pi-download"
+            severity="secondary"
+            :loading="isDownloading"
+            :disabled="!imageSrc"
+            outlined
+            @click="downloadImage"
+          />
+        </div>
       </template>
     </Toolbar>
 
@@ -35,7 +37,7 @@
 
     <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
 
-    <Image v-if="imageSrc" :src="imageSrc" :alt="imageAlt" preview :imageStyle="imageStyle" />
+    <Image v-if="imageSrc" :src="imageSrc" :alt="imageAlt" preview imageClass="block w-full max-w-[640px]" />
     <Message v-else severity="warn">{{ t('loadSlicePrompt') }}</Message>
   </Panel>
 </template>
@@ -70,7 +72,6 @@ const props = defineProps({
 const { t } = usePreferences()
 const maxSliceIdx = 95
 const overlayValues = [null, 't1', 't1ce', 't2', 'flair']
-const imageStyle = { width: '100%', maxWidth: '640px', display: 'block' }
 
 const overlayOptions = computed(() => overlayValues.map((value) => ({
   label: value ? `${t('overlay')} ${value.toUpperCase()}` : t('overlayMaskOnly'),

@@ -9,8 +9,8 @@
 
     <Divider />
 
-    <div :style="{ display: 'flex', gap: '1rem', alignItems: 'flex-start', minHeight: '42rem', flexWrap: 'wrap' }">
-      <div :style="{ flex: '1 1 32rem', minWidth: '20rem' }">
+    <div class="flex min-h-[42rem] flex-wrap items-start gap-4">
+      <div class="min-w-80 flex-[1_1_32rem]">
         <UploadPanel
           v-model="selectedFiles"
           :is-uploading="isUploading"
@@ -18,7 +18,7 @@
           @submit="submitUpload"
         />
       </div>
-      <div :style="{ flex: '1 1 30rem', minWidth: '20rem' }">
+      <div class="min-w-80 flex-[1_1_30rem]">
         <ScansList
           :scans="scans"
           :is-loading="isLoadingScans"
