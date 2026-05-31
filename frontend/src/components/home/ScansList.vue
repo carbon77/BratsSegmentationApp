@@ -1,19 +1,21 @@
 <template>
   <Panel :header="t('scansTitle')" toggleable>
-    <div class="list-toolbar">
-      <IconField>
-        <InputIcon class="pi pi-search" />
-        <InputText v-model="searchTerm" :placeholder="t('searchByTitle')" />
-      </IconField>
-      <Button
-        :label="sortDirection === 'asc' ? t('sortAsc') : t('sortDesc')"
-        :icon="sortDirection === 'asc' ? 'pi pi-sort-alpha-down' : 'pi pi-sort-alpha-up-alt'"
-        outlined
-        @click="toggleSortDirection"
-      />
-    </div>
+    <Toolbar>
+      <template #end>
+        <IconField>
+          <InputIcon class="pi pi-search" />
+          <InputText v-model="searchTerm" :placeholder="t('searchByTitle')" />
+        </IconField>
+        <Button
+          :label="sortDirection === 'asc' ? t('sortAsc') : t('sortDesc')"
+          :icon="sortDirection === 'asc' ? 'pi pi-sort-alpha-down' : 'pi pi-sort-alpha-up-alt'"
+          outlined
+          @click="toggleSortDirection"
+        />
+      </template>
+    </Toolbar>
 
-    <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
+    <ProgressSpinner v-if="isLoading" class="h-8 w-8" strokeWidth="6" />
 
     <DataTable
       v-else
@@ -33,9 +35,9 @@
           <Tag :value="statusLabel(slotProps.data.status)" :severity="statusSeverity(slotProps.data.status)" />
         </template>
       </Column>
-      <Column :header="t('actions')" bodyClass="actions-cell">
+      <Column :header="t('actions')" headerClass="w-64" bodyClass="w-64">
         <template #body="slotProps">
-          <div class="table-actions">
+          <ButtonGroup>
             <RouterLink v-if="slotProps.data.status === 'completed'" :to="`/scans/${slotProps.data.case_id}`">
               <Button size="small" icon="pi pi-external-link" :label="t('open')" text />
             </RouterLink>
@@ -49,7 +51,7 @@
               :loading="deletingCaseId === slotProps.data.case_id"
               @click="$emit('delete', slotProps.data.case_id)"
             />
-          </div>
+          </ButtonGroup>
         </template>
       </Column>
       <template #empty>{{ t('noScans') }}</template>
@@ -61,6 +63,7 @@
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
+import ButtonGroup from 'primevue/buttongroup'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import IconField from 'primevue/iconfield'
@@ -69,6 +72,7 @@ import InputText from 'primevue/inputtext'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
+import Toolbar from 'primevue/toolbar'
 
 import { usePreferences } from '../../services/preferences'
 

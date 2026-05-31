@@ -1,6 +1,6 @@
 <template>
   <Panel :header="t('metrics')">
-    <Accordion v-if="rows.length" :activeIndex="0" class="metrics-accordion">
+    <Accordion v-if="rows.length" :activeIndex="0">
       <AccordionTab v-for="section in sectionedRows" :key="section.group" :header="section.group.toUpperCase()">
         <DataTable :value="section.items" size="small" responsiveLayout="scroll">
           <Column field="metric" :header="t('metric')" />

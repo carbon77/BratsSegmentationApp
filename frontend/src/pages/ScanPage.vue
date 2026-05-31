@@ -1,119 +1,148 @@
 <template>
   <section>
-    <Panel>
-      <template #header>
-        <div class="scan-header">
-          <Tag :value="title || t('scanFallback', { caseId })" severity="info" />
-          <div class="title-editor">
-            <InputText v-model="editedTitle" :placeholder="t('scanTitlePlaceholder')" />
-            <Button
-              :label="t('saveTitle')"
-              icon="pi pi-check"
-              size="small"
-              :disabled="!editedTitle.trim() || editedTitle === title"
-              :loading="isSavingTitle"
-              @click="saveTitle"
-            />
-          </div>
-          <div class="scan-actions">
-            <Dropdown
-              v-model="dicomModality"
-              :options="modalityOptions"
-              optionLabel="label"
-              optionValue="value"
-              :placeholder="t('chooseModality')"
-              class="modality-dropdown"
-            />
-            <Button
-              :label="t('downloadDicom')"
-              icon="pi pi-file-export"
-              outlined
-              size="small"
-              :loading="isConvertingDicom"
-              :disabled="!dicomModality || isSendingOrthanc"
-              @click="downloadDicom"
-            />
-            <Button
-              :label="t('sendDicomToOrthanc')"
-              icon="pi pi-send"
-              outlined
-              size="small"
-              :loading="isSendingOrthanc"
-              :disabled="!dicomModality || isConvertingDicom"
-              @click="sendToOrthanc"
-            />
-            <Button :label="t('downloadJson')" icon="pi pi-download" outlined size="small" @click="downloadMetricsJson" />
-            <Button :label="t('downloadCsv')" icon="pi pi-file" outlined size="small" @click="downloadMetricsCsv" />
-            <Button
-              :label="t('deleteScan')"
-              icon="pi pi-trash"
-              severity="danger"
-              outlined
-              :loading="isDeleting"
-              @click="removeScan"
-            />
-          </div>
-        </div>
+    <Card>
+      <template #title>
+        <Tag :value="title || t('scanFallback', { caseId })" severity="info" />
       </template>
+      <template #subtitle>
+        <InputGroup>
+          <InputText v-model="editedTitle" :placeholder="t('scanTitlePlaceholder')" />
+          <Button
+            :label="t('saveTitle')"
+            icon="pi pi-check"
+            :disabled="!editedTitle.trim() || editedTitle === title"
+            :loading="isSavingTitle"
+            @click="saveTitle"
+          />
+          <Button
+            :label="t('deleteScan')"
+            icon="pi pi-trash"
+            severity="danger"
+            outlined
+            :loading="isDeleting"
+            @click="removeScan"
+          />
+        </InputGroup>
+      </template>
+    </Card>
 
-      <ProgressSpinner v-if="isLoading" style="width: 2rem; height: 2rem" strokeWidth="6" />
+    <Divider />
 
-      <div v-else class="scan-content">
-        <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
-        <Message v-if="metadataSavedMessage" severity="success">{{ metadataSavedMessage }}</Message>
-        <Message v-if="orthancMessage" severity="success">{{ orthancMessage }}</Message>
+    <ProgressSpinner v-if="isLoading" class="h-8 w-8" strokeWidth="6" />
 
-        <section class="metadata-panel" aria-labelledby="dicom-metadata-title">
-          <div>
-            <h3 id="dicom-metadata-title" class="section-title">{{ t('dicomMetadata') }}</h3>
-            <p class="section-caption">{{ t('dicomMetadataCaption') }}</p>
-          </div>
-          <div class="metadata-form">
-            <label v-for="field in metadataFields" :key="field.key" class="field-block">
-              <span>{{ t(field.labelKey) }}</span>
+    <template v-else>
+      <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
+      <Message v-if="metadataSavedMessage" severity="success">{{ metadataSavedMessage }}</Message>
+      <Message v-if="orthancMessage" severity="success">{{ orthancMessage }}</Message>
+
+      <div class="flex min-h-[42rem] flex-wrap items-start gap-4">
+        <div class="min-w-48 flex-[0_1_14rem]">
+          <Panel :header="t('scanSections')">
+            <Menu :model="sectionMenuItems" />
+          </Panel>
+        </div>
+
+        <div class="min-w-[22rem] flex-[3_1_36rem]">
+          <SliceViewer v-if="activeSection === 'slices'" :case-id="caseId" :initial-slice="60" />
+
+          <MetricsTable v-else-if="activeSection === 'metrics'" :metrics="metrics" />
+
+          <Panel v-else :header="t('dicomMetadata')">
+            <Message severity="info">{{ t('dicomMetadataCaption') }}</Message>
+            <DataTable :value="metadataFields" size="small" responsiveLayout="scroll">
+              <Column :header="t('metric')">
+                <template #body="slotProps">
+                  {{ t(slotProps.data.labelKey) }}
+                </template>
+              </Column>
+              <Column :header="t('value')">
+                <template #body="slotProps">
+                  <Dropdown
+                    v-if="slotProps.data.type === 'select'"
+                    v-model="editedDicomMetadata[slotProps.data.key]"
+                    :options="slotProps.data.options"
+                    optionLabel="label"
+                    optionValue="value"
+                    :placeholder="t('dicomMetadataEmpty')"
+                    showClear
+                  />
+                  <InputText
+                    v-else
+                    v-model="editedDicomMetadata[slotProps.data.key]"
+                    :type="slotProps.data.type || 'text'"
+                    :placeholder="t('dicomMetadataEmpty')"
+                  />
+                </template>
+              </Column>
+            </DataTable>
+          </Panel>
+        </div>
+
+        <div class="min-w-64 flex-[1_1_20rem]">
+          <Panel v-if="activeSection === 'slices'" :header="t('sectionSettings')">
+            <Panel :header="t('dicomExportSettings')" toggleable>
               <Dropdown
-                v-if="field.type === 'select'"
-                v-model="editedDicomMetadata[field.key]"
-                :options="field.options"
+                v-model="dicomModality"
+                :options="modalityOptions"
                 optionLabel="label"
                 optionValue="value"
-                :placeholder="t('dicomMetadataEmpty')"
-                showClear
+                :placeholder="t('chooseModality')"
               />
-              <InputText
-                v-else
-                v-model="editedDicomMetadata[field.key]"
-                :type="field.type || 'text'"
-                :placeholder="t('dicomMetadataEmpty')"
+              <Divider />
+              <Button
+                :label="t('downloadDicom')"
+                icon="pi pi-file-export"
+                outlined
+                :loading="isConvertingDicom"
+                :disabled="!dicomModality || isSendingOrthanc"
+                @click="downloadDicom"
               />
-            </label>
-          </div>
-          <div class="metadata-actions">
-            <Button
-              :label="t('saveDicomMetadata')"
-              icon="pi pi-save"
-              size="small"
-              :loading="isSavingMetadata"
-              @click="saveDicomMetadata"
-            />
-          </div>
-        </section>
+              <Button
+                :label="t('sendDicomToOrthanc')"
+                icon="pi pi-send"
+                outlined
+                :loading="isSendingOrthanc"
+                :disabled="!dicomModality || isConvertingDicom"
+                @click="sendToOrthanc"
+              />
+            </Panel>
+          </Panel>
 
-        <MetricsTable :metrics="metrics" />
-        <Divider />
-        <SliceViewer :case-id="caseId" :initial-slice="60" />
+          <Panel v-else-if="activeSection === 'metrics'" :header="t('sectionSettings')">
+            <Panel :header="t('metricsExportSettings')" toggleable>
+              <Button :label="t('downloadJson')" icon="pi pi-download" outlined @click="downloadMetricsJson" />
+              <Button :label="t('downloadCsv')" icon="pi pi-file" outlined @click="downloadMetricsCsv" />
+            </Panel>
+          </Panel>
+
+          <Panel v-else :header="t('sectionSettings')">
+            <Panel :header="t('metadataSettings')" toggleable>
+              <Button
+                :label="t('saveDicomMetadata')"
+                icon="pi pi-save"
+                :loading="isSavingMetadata"
+                @click="saveDicomMetadata"
+              />
+            </Panel>
+          </Panel>
+        </div>
       </div>
-    </Panel>
+    </template>
   </section>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import Card from 'primevue/card'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
 import Divider from 'primevue/divider'
 import Dropdown from 'primevue/dropdown'
+import InputGroup from 'primevue/inputgroup'
 import InputText from 'primevue/inputtext'
+import Menu from 'primevue/menu'
 import Message from 'primevue/message'
 import Panel from 'primevue/panel'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -135,6 +164,7 @@ const router = useRouter()
 const metrics = ref({})
 const title = ref('')
 const editedTitle = ref('')
+const activeSection = ref('slices')
 const isLoading = ref(false)
 const isDeleting = ref(false)
 const isSavingTitle = ref(false)
@@ -170,6 +200,23 @@ const metadataFields = [
   { key: 'referring_physician_name', labelKey: 'dicomReferringPhysicianName' }
 ]
 const editedDicomMetadata = reactive(createEmptyDicomMetadata())
+const sectionMenuItems = computed(() => [
+  {
+    label: t('slicesSection'),
+    icon: activeSection.value === 'slices' ? 'pi pi-check' : 'pi pi-images',
+    command: () => { activeSection.value = 'slices' }
+  },
+  {
+    label: t('metricsSection'),
+    icon: activeSection.value === 'metrics' ? 'pi pi-check' : 'pi pi-chart-bar',
+    command: () => { activeSection.value = 'metrics' }
+  },
+  {
+    label: t('metadataSection'),
+    icon: activeSection.value === 'metadata' ? 'pi pi-check' : 'pi pi-id-card',
+    command: () => { activeSection.value = 'metadata' }
+  }
+])
 
 function createEmptyDicomMetadata() {
   return {

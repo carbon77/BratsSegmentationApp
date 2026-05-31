@@ -1,4 +1,6 @@
 import { computed, readonly, ref } from 'vue'
+import laraDarkThemeUrl from 'primevue/resources/themes/lara-dark-blue/theme.css?url'
+import laraLightThemeUrl from 'primevue/resources/themes/lara-light-blue/theme.css?url'
 
 const LANGUAGE_KEY = 'brats_language'
 const THEME_KEY = 'brats_theme'
@@ -98,6 +100,14 @@ const messages = {
     metricsLoadFailed: 'Could not load scan metrics. It may still be processing.',
     titleUpdateFailed: 'Could not update scan title.',
     currentScanDeleteFailed: 'Could not delete this scan.',
+    scanSections: 'Scan sections',
+    slicesSection: 'Slices',
+    metricsSection: 'Metrics',
+    metadataSection: 'Metadata',
+    sectionSettings: 'Settings',
+    dicomExportSettings: 'DICOM export',
+    metricsExportSettings: 'Metrics export',
+    metadataSettings: 'Metadata actions',
     metrics: 'Metrics',
     metric: 'Metric',
     value: 'Value',
@@ -208,6 +218,14 @@ const messages = {
     metricsLoadFailed: 'Не удалось загрузить метрики скана. Возможно, он ещё обрабатывается.',
     titleUpdateFailed: 'Не удалось обновить название скана.',
     currentScanDeleteFailed: 'Не удалось удалить этот скан.',
+    scanSections: 'Разделы скана',
+    slicesSection: 'Срезы',
+    metricsSection: 'Метрики',
+    metadataSection: 'Метаданные',
+    sectionSettings: 'Настройки',
+    dicomExportSettings: 'Экспорт DICOM',
+    metricsExportSettings: 'Экспорт метрик',
+    metadataSettings: 'Действия с метаданными',
     metrics: 'Метрики',
     metric: 'Метрика',
     value: 'Значение',
@@ -249,9 +267,18 @@ export function t(key, params = {}) {
 }
 
 function applyThemeClass() {
+  const themeLinkId = 'primevue-theme'
+  let themeLink = document.getElementById(themeLinkId)
+
+  if (!themeLink) {
+    themeLink = document.createElement('link')
+    themeLink.id = themeLinkId
+    themeLink.rel = 'stylesheet'
+    document.head.appendChild(themeLink)
+  }
+
+  themeLink.href = resolvedTheme.value === 'dark' ? laraDarkThemeUrl : laraLightThemeUrl
   document.documentElement.dataset.theme = resolvedTheme.value
-  document.documentElement.classList.toggle('app-theme-dark', resolvedTheme.value === 'dark')
-  document.documentElement.classList.toggle('app-theme-light', resolvedTheme.value === 'light')
 }
 
 export function setLanguage(nextLanguage) {
@@ -268,6 +295,7 @@ export function setTheme(nextTheme) {
 }
 
 export function initializePreferences() {
+  document.body.style.margin = '0'
   applyThemeClass()
 
   mediaQuery.addEventListener('change', (event) => {

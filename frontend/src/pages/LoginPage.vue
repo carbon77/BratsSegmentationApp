@@ -1,18 +1,27 @@
 <template>
-  <section class="auth-page">
-    <Card class="auth-card">
+  <section class="mx-auto my-16 max-w-[440px]">
+    <Card>
       <template #title>{{ t('login') }}</template>
       <template #subtitle>{{ t('authLoginSubtitle') }}</template>
       <template #content>
-        <form class="auth-form" @submit.prevent="submitLogin">
-          <label class="field-block">
-            <span>{{ t('email') }}</span>
-            <InputText v-model="email" type="email" autocomplete="email" required />
-          </label>
-          <label class="field-block">
-            <span>{{ t('password') }}</span>
-            <Password v-model="password" :feedback="false" toggleMask autocomplete="current-password" required />
-          </label>
+        <form class="grid gap-4" @submit.prevent="submitLogin">
+          <FloatLabel>
+            <InputText id="email" v-model="email" type="email" autocomplete="email" required class="w-full" />
+            <label for="email">{{ t('email') }}</label>
+          </FloatLabel>
+          <FloatLabel>
+            <Password
+              inputId="password"
+              v-model="password"
+              :feedback="false"
+              toggleMask
+              autocomplete="current-password"
+              required
+              inputClass="w-full"
+              class="w-full"
+            />
+            <label for="password">{{ t('password') }}</label>
+          </FloatLabel>
           <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
           <Button :label="t('login')" icon="pi pi-sign-in" type="submit" :loading="isSubmitting" />
         </form>
@@ -29,6 +38,7 @@ import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
+import FloatLabel from 'primevue/floatlabel'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Password from 'primevue/password'

@@ -80,38 +80,49 @@ def _normalize_background(background_slice: np.ndarray) -> np.ndarray:
     return background
 
 
+def _class_rgb_colors() -> dict[int, np.ndarray]:
+    return {
+        class_id: np.array(SEGMENTATION_CMAP(class_id)[:3], dtype=np.float32)
+        for class_id in CLASS_LABELS
+    }
+
+
+def _encode_png(image: np.ndarray):
+    import cv2
+
+    success, encoded = cv2.imencode('.png', image)
+    if not success:
+        raise ValueError('Could not encode slice image as PNG')
+    return io.BytesIO(encoded.tobytes())
+
+
 def get_slice_plot(
     prediction: np.ndarray,
     slice_idx: int,
     background_slice: np.ndarray | None = None,
     modality: str | None = None,
+    include_mask: bool = True,
 ):
     volume = prediction[0] if prediction.ndim == 4 else prediction
-    y = volume[slice_idx, :, :]
+    mask_slice = volume[slice_idx, :, :]
 
-    fig, ax = plt.subplots()
-    if background_slice is None:
-        im = ax.imshow(y, vmin=0, vmax=max(CLASS_LABELS), cmap=SEGMENTATION_CMAP)
-        fig.colorbar(im, ax=ax, ticks=list(CLASS_LABELS.keys()))
-        title = f'Segmentation mask - slice {slice_idx}'
+    if background_slice is not None:
+        background = (_normalize_background(background_slice) * 255).astype(np.uint8)
+        image = np.repeat(background[:, :, np.newaxis], 3, axis=2)
     else:
-        ax.imshow(_normalize_background(background_slice), cmap='gray')
-        masked_prediction = np.ma.masked_where(y == 0, y)
-        im = ax.imshow(
-            masked_prediction,
-            vmin=0,
-            vmax=max(CLASS_LABELS),
-            cmap=SEGMENTATION_CMAP,
-            alpha=0.65,
-        )
-        fig.colorbar(im, ax=ax, ticks=list(CLASS_LABELS.keys()))
-        title = f'Segmentation on {modality.upper()} - slice {slice_idx}'
+        image = np.zeros((*mask_slice.shape, 3), dtype=np.uint8)
 
-    ax.set_title(title)
-    ax.axis('off')
-    fig.tight_layout()
+    if include_mask:
+        colors = _class_rgb_colors()
+        mask_rgb = np.zeros_like(image, dtype=np.float32)
+        for class_id, color in colors.items():
+            mask_rgb[mask_slice == class_id] = color * 255
 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=150)
-    plt.close(fig)
-    return buf
+        if background_slice is None:
+            image = mask_rgb.astype(np.uint8)
+        else:
+            foreground = mask_slice > 0
+            blended = (image.astype(np.float32) * 0.35) + (mask_rgb * 0.65)
+            image[foreground] = blended[foreground].astype(np.uint8)
+
+    return _encode_png(image)

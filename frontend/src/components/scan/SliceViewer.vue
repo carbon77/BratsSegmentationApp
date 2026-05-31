@@ -1,16 +1,13 @@
 <template>
   <Panel :header="t('segmentationSlice')">
-    <div class="slice-controls">
-      <div class="field-block">
-        <label for="sliceIdx">{{ t('sliceIndex') }}</label>
-        <InputNumber v-model="localSliceIdx" :min="0" :max="maxSliceIdx" inputId="sliceIdx" />
-      </div>
-      <div class="field-block field-block--wide">
-        <label for="sliceSlider">{{ t('quickAdjust') }}</label>
-        <Slider id="sliceSlider" v-model="localSliceIdx" :min="0" :max="maxSliceIdx" />
-      </div>
-      <div class="field-block field-block--wide">
-        <label for="overlayModality">{{ t('overlay') }}</label>
+    <Toolbar>
+      <template #start>
+        <InputGroup>
+          <InputGroupAddon>{{ t('sliceIndex') }}</InputGroupAddon>
+          <InputNumber v-model="localSliceIdx" :min="0" :max="maxSliceIdx" inputId="sliceIdx" />
+        </InputGroup>
+      </template>
+      <template #end>
         <Dropdown
           id="overlayModality"
           v-model="overlayModality"
@@ -19,8 +16,6 @@
           optionValue="value"
           :placeholder="t('overlayMaskOnly')"
         />
-      </div>
-      <div class="button-row">
         <Button :label="t('loadSlice')" icon="pi pi-image" :loading="isLoading" @click="loadImage" />
         <Button
           :label="t('downloadPng')"
@@ -31,14 +26,16 @@
           outlined
           @click="downloadImage"
         />
-      </div>
-    </div>
+      </template>
+    </Toolbar>
+
+    <Panel :header="t('quickAdjust')">
+      <Slider id="sliceSlider" v-model="localSliceIdx" :min="0" :max="maxSliceIdx" />
+    </Panel>
 
     <Message v-if="errorMessage" severity="error">{{ errorMessage }}</Message>
 
-    <div v-if="imageSrc" class="image-wrapper">
-      <Image :src="imageSrc" :alt="imageAlt" preview imageClass="slice-image" />
-    </div>
+    <Image v-if="imageSrc" :src="imageSrc" :alt="imageAlt" preview imageClass="block w-full max-w-[640px]" />
     <Message v-else severity="warn">{{ t('loadSlicePrompt') }}</Message>
   </Panel>
 </template>
@@ -48,10 +45,13 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Dropdown from 'primevue/dropdown'
 import Image from 'primevue/image'
+import InputGroup from 'primevue/inputgroup'
+import InputGroupAddon from 'primevue/inputgroupaddon'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
 import Panel from 'primevue/panel'
 import Slider from 'primevue/slider'
+import Toolbar from 'primevue/toolbar'
 
 import { downloadSlice } from '../../services/api'
 import { usePreferences } from '../../services/preferences'

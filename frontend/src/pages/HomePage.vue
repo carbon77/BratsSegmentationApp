@@ -1,38 +1,40 @@
 <template>
-  <section class="home-page">
+  <section>
     <Message v-if="pageError" severity="error">{{ pageError }}</Message>
 
-    <div class="page-hero">
-      <h1 class="page-title">{{ t('appName') }}</h1>
-      <p class="page-subtitle">{{ t('dashboardSubtitle') }}</p>
-    </div>
+    <Card>
+      <template #title>{{ t('appName') }}</template>
+      <template #subtitle>{{ t('dashboardSubtitle') }}</template>
+    </Card>
 
-    <Splitter class="home-splitter">
-      <SplitterPanel :size="55" :min-size="40">
+    <Divider />
+
+    <div class="flex min-h-[42rem] flex-wrap items-start gap-4">
+      <div class="min-w-80 flex-[1_1_32rem]">
         <UploadPanel
           v-model="selectedFiles"
           :is-uploading="isUploading"
           :error-message="uploadError"
           @submit="submitUpload"
         />
-      </SplitterPanel>
-      <SplitterPanel :size="45" :min-size="30">
+      </div>
+      <div class="min-w-80 flex-[1_1_30rem]">
         <ScansList
           :scans="scans"
           :is-loading="isLoadingScans"
           :deleting-case-id="deletingCaseId"
           @delete="handleDeleteScan"
         />
-      </SplitterPanel>
-    </Splitter>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
+import Card from 'primevue/card'
+import Divider from 'primevue/divider'
 import Message from 'primevue/message'
-import Splitter from 'primevue/splitter'
-import SplitterPanel from 'primevue/splitterpanel'
 
 import ScansList from '../components/home/ScansList.vue'
 import UploadPanel from '../components/home/UploadPanel.vue'
