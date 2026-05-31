@@ -11,13 +11,17 @@
 - Асинхронная обработка через Kafka и отдельный worker-процесс.
 - Просмотр метрик качества сегментации.
 - Просмотр PNG-среза маски и наложение маски на выбранную МРТ-модальность.
+- Экспорт метрик в JSON/CSV из интерфейса просмотра скана.
+- Заполнение DICOM-метаданных пациента/исследования для каждого скана.
+- Конвертация выбранной NIfTI-модальности в ZIP-архив DICOM-срезов.
+- Отправка DICOM-срезов напрямую в Orthanc.
 - Переименование и удаление сканов.
 - Переключение языка интерфейса: русский / английский.
 - Переключение темы интерфейса: светлая / тёмная / системная.
 
 ## Архитектура
 
-Приложение разделено на frontend, API backend, очередь задач, worker сегментации, PostgreSQL и S3-совместимое объектное хранилище.
+Приложение разделено на frontend, API backend, очередь задач, worker сегментации, PostgreSQL, S3-совместимое объектное хранилище и Orthanc для приёма DICOM-экспорта.
 
 ```mermaid
 flowchart LR
@@ -36,7 +40,8 @@ flowchart LR
     Worker -->|update status, metrics, result_path| Postgres
 
     Backend -->|download result files / render slices| ObjectStorage
-    Backend -->|metrics and generated PNG slices| Browser
+    Backend -->|convert NIfTI to DICOM / upload instances| Orthanc[(Orthanc)]
+    Backend -->|metrics, DICOM ZIP, generated PNG slices| Browser
 ```
 
 ### Frontend
@@ -47,10 +52,10 @@ Frontend находится в каталоге `frontend/` и реализов�
 - `frontend/src/pages/HomePage.vue` — главная страница с панелью загрузки и списком сканов.
 - `frontend/src/components/home/UploadPanel.vue` — выбор NIfTI-файлов и автоматическое сопоставление модальностей.
 - `frontend/src/components/home/ScansList.vue` — поиск, сортировка, открытие и удаление сканов.
-- `frontend/src/pages/ScanPage.vue` — страница конкретного скана с метриками, редактированием названия и просмотром срезов.
+- `frontend/src/pages/ScanPage.vue` — страница конкретного скана с метриками, редактированием названия, DICOM-метаданными, экспортом и просмотром срезов.
 - `frontend/src/components/scan/MetricsTable.vue` — группированная таблица метрик.
 - `frontend/src/components/scan/SliceViewer.vue` — загрузка, просмотр и скачивание PNG-срезов.
-- `frontend/src/services/api.js` — Axios-клиент, JWT, REST-запросы и SSE-подписка на обновления сканов.
+- `frontend/src/services/api.js` — Axios-клиент, JWT, REST-запросы, скачивание DICOM ZIP, отправка в Orthanc и SSE-подписка на обновления сканов.
 - `frontend/src/services/preferences.js` — локальные настройки языка и темы.
 
 ### Backend API
@@ -58,13 +63,14 @@ Frontend находится в каталоге `frontend/` и реализов�
 Backend находится в каталоге `backend/` и реализован на FastAPI.
 
 - `backend/app/main.py` — создание приложения, подключение роутера, инициализация схемы БД и Kafka producer в lifespan.
-- `backend/app/api/routes.py` — HTTP API: auth, upload, scans, metrics, images, SSE, delete, patch.
+- `backend/app/api/routes.py` — HTTP API: auth, upload, scans, metrics, images, SSE, DICOM, delete, patch.
 - `backend/app/db/models.py` — SQLAlchemy-модели пользователей и сканов.
 - `backend/app/services/auth.py` — JWT, хеширование паролей и получение текущего пользователя.
 - `backend/app/services/storage.py` — staging файлов, работа с S3-compatible storage и удаление артефактов.
 - `backend/app/services/tasks.py` — producer задач сегментации в Kafka.
 - `backend/app/services/results.py` — отрисовка PNG-срезов через matplotlib.
 - `backend/app/services/preprocessing.py` — подготовка выбранного среза модальности для наложения.
+- `backend/app/services/dicom.py` — конвертация NIfTI-объёмов в DICOM-срезы, упаковка в ZIP и отправка экземпляров в Orthanc.
 - `backend/app/services/segmentation.py` и `backend/app/services/inference.py` — запуск модели и расчёт результатов.
 
 ### Worker
@@ -131,12 +137,14 @@ sequenceDiagram
 - matplotlib
 - pandas
 - S3-compatible object storage, например Yandex Cloud Object Storage
+- pydicom
+- httpx
 
 ### Инфраструктура
 
 - Docker Compose
 - Nginx reverse proxy
-- Отдельные контейнеры для frontend, backend, worker, PostgreSQL и Kafka
+- Отдельные контейнеры для frontend, backend, worker, PostgreSQL, Kafka и Orthanc
 
 ## Как запустить
 
@@ -154,6 +162,10 @@ AWS_S3_ENDPOINT_URL=https://storage.yandexcloud.net
 AWS_ACCESS_KEY_ID=<your-access-key>
 AWS_SECRET_ACCESS_KEY=<your-secret-key>
 
+ORTHANC_URL=http://orthanc:8042
+ORTHANC_USERNAME=orthanc
+ORTHANC_PASSWORD=orthanc
+
 LOG_LEVEL=INFO
 ```
 
@@ -170,6 +182,7 @@ docker compose up --build
 - Web UI через Nginx: <http://localhost/>
 - Backend API напрямую: <http://localhost:8000/>
 - Frontend preview контейнер напрямую: <http://localhost:4173/>
+- Orthanc напрямую: <http://localhost:8042/> (по умолчанию `orthanc` / `orthanc`)
 
 ### 3. Открыть приложение
 
@@ -178,6 +191,7 @@ docker compose up --build
 3. Загрузите 4 NIfTI-файла с модальностями `t1`, `t1ce`, `t2`, `flair`.
 4. Дождитесь статуса `Completed` / `Готово` в списке сканов.
 5. Откройте скан, посмотрите метрики и загрузите нужный срез.
+6. При необходимости заполните DICOM-метаданные, скачайте ZIP-архив DICOM-срезов выбранной модальности или отправьте их в Orthanc.
 
 ## Локальная разработка без полного Docker Compose
 
@@ -225,10 +239,13 @@ Vite dev server поднимется на локальном порту, кот�
 | `GET` | `/auth/me` | Возвращает текущего пользователя. |
 | `POST` | `/predict` | Загружает MRI-модальности и ставит задачу сегментации в очередь. |
 | `GET` | `/scans` | Возвращает список сканов текущего пользователя. |
+| `GET` | `/scans/{case_id}` | Возвращает один скан вместе с DICOM-метаданными. |
 | `GET` | `/scans/events` | SSE-поток обновлений списка сканов. |
 | `GET` | `/scans/{case_id}/result/metrics` | Возвращает сохранённые метрики сегментации. |
-| `GET` | `/scans/{case_id}/result/images?slice_idx=60&overlay_modality=t1` | Возвращает PNG-срез маски, опционально с наложением на модальность. |
-| `PATCH` | `/scans/{case_id}` | Обновляет метаданные скана, сейчас — название. |
+| `GET` | `/scans/{case_id}/result/images?slice_idx=60&overlay_modality=t1&include_mask=true` | Возвращает PNG-срез маски, опционально с наложением на модальность. |
+| `GET` | `/scans/{case_id}/dicom?modality=t1` | Конвертирует выбранную модальность в ZIP-архив DICOM-срезов. |
+| `POST` | `/scans/{case_id}/dicom/orthanc?modality=t1` | Конвертирует выбранную модальность и отправляет DICOM-срезы в Orthanc. |
+| `PATCH` | `/scans/{case_id}` | Обновляет название скана и/или DICOM-метаданные. |
 | `DELETE` | `/scans/{case_id}` | Удаляет скан и связанные файлы. |
 
 ## Основные переменные окружения
@@ -248,6 +265,10 @@ Vite dev server поднимется на локальном порту, кот�
 | `AWS_ACCESS_KEY_ID` | пусто | Access key для S3. |
 | `AWS_SECRET_ACCESS_KEY` | пусто | Secret key для S3. |
 | `LOG_LEVEL` | `INFO` | Уровень логирования worker. |
+| `ORTHANC_URL` | `http://orthanc:8042` | Base URL Orthanc для backend-контейнера. |
+| `ORTHANC_USERNAME` | пусто / `orthanc` в Compose | Пользователь Basic Auth для Orthanc. |
+| `ORTHANC_PASSWORD` | пусто / `orthanc` в Compose | Пароль Basic Auth для Orthanc. |
+| `ORTHANC_UPLOAD_TIMEOUT_SECONDS` | `30` | Таймаут HTTP-запросов отправки DICOM-срезов в Orthanc. |
 
 ## Формат загружаемых файлов
 
@@ -256,6 +277,22 @@ Vite dev server поднимется на локальном порту, кот�
 - При массовом выборе frontend ищет ключевые слова в имени файла.
 - Для `t1ce` проверка выполняется раньше `t1`, чтобы файл `t1ce` не был ошибочно отнесён к `t1`.
 - `true_mask` можно загрузить дополнительно, если нужно сравнение с истинной маской.
+
+## DICOM и Orthanc
+
+На странице скана есть отдельный раздел DICOM-метаданных. Значения сохраняются в PostgreSQL вместе со сканом и используются при конвертации NIfTI в DICOM. Поддерживаются поля:
+
+- patient name / patient ID / birth date / sex;
+- accession number и study ID;
+- study date, study description и series description;
+- institution name и referring physician name.
+
+После сохранения метаданных можно выбрать одну из исходных модальностей (`t1`, `t1ce`, `t2`, `flair`) и выполнить одно из действий:
+
+1. **DICOM** — скачать ZIP-архив, где каждый срез выбранной NIfTI-модальности сохранён как отдельный `.dcm` файл.
+2. **Orthanc** — отправить все DICOM-срезы выбранной модальности в Orthanc через endpoint `/instances`.
+
+В Docker Compose Orthanc запускается с включённой Basic Auth и доступен на <http://localhost:8042/>. Учётные данные по умолчанию: `orthanc` / `orthanc`. Для production замените их через переменные окружения и ограничьте доступ к порту Orthanc.
 
 ## Полезные команды
 
@@ -268,6 +305,9 @@ docker compose down
 
 # Остановка с удалением volume данных
 docker compose down -v
+
+# Запуск backend-тестов
+cd backend && uv run pytest -q
 
 # Сборка frontend
 cd frontend && pnpm build
@@ -282,3 +322,5 @@ cd backend && uv run python -m app.worker
 - Если статус `Failed`, проверьте доступность S3-compatible storage, корректность credentials и формат NIfTI-файлов.
 - Если список сканов не обновляется автоматически, проверьте endpoint `/api/scans/events` и Nginx buffering; конфигурация должна отключать буферизацию SSE.
 - Если PNG-срез не строится, убедитесь, что скан в статусе `completed`, а `slice_idx` находится внутри размеров загруженного объёма.
+- Если DICOM ZIP не скачивается, проверьте доступность исходной модальности в S3-compatible storage и корректность NIfTI-файла.
+- Если отправка в Orthanc завершается ошибкой, проверьте `ORTHANC_URL`, `ORTHANC_USERNAME`, `ORTHANC_PASSWORD`, доступность <http://localhost:8042/> и логи контейнеров `backend`/`orthanc`.
