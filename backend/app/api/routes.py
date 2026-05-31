@@ -210,6 +210,7 @@ async def result_images(
             None,
             description='MRI modality to draw underneath the segmentation mask. Omit for mask only.',
         ),
+        include_mask: bool = Query(True, description='Whether to draw the segmentation mask over the slice.'),
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user),
 ):
@@ -237,7 +238,7 @@ async def result_images(
             except IndexError as exc:
                 raise HTTPException(status_code=400, detail='slice_idx is outside the uploaded MRI volume') from exc
 
-    buf = get_slice_plot(prediction, slice_idx, background_slice, overlay_modality)
+    buf = get_slice_plot(prediction, slice_idx, background_slice, overlay_modality, include_mask)
     buf.seek(0)
     return StreamingResponse(buf, media_type='image/png')
 

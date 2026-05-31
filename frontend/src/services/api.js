@@ -105,8 +105,8 @@ export async function updateDicomMetadata(caseId, dicomMetadata) {
   await api.patch(`/scans/${caseId}`, { dicom_metadata: dicomMetadata })
 }
 
-export async function downloadSlice(caseId, sliceIdx, overlayModality = null) {
-  const params = { slice_idx: sliceIdx }
+export async function downloadSlice(caseId, sliceIdx, overlayModality = null, includeMask = true) {
+  const params = { slice_idx: sliceIdx, include_mask: includeMask }
   if (overlayModality) {
     params.overlay_modality = overlayModality
   }
